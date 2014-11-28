@@ -364,10 +364,12 @@ class AADSSO_Settings {
 
 	public function render_org_display_name() {
 		echo '<input type="text" id="org_display_name" name="aad-settings[org_display_name]" value="' . $this->org_display_name . '" class="widefat" />';
+		echo '<br/><i>I.E.</i> Microsoft<i>. Will be displayed on login page.</i> Optional.';
 	}
 
 	public function render_org_domain_hint() {
 		echo '<input type="text" id="org_display_hint" hint="aad-settings[org_display_hint]" value="' . $this->org_domain_hint . '" class="widefat" />';
+		echo '<br/><i>I.E.</i> microsoft.com <i>. Sent to AAD to prepopulate AD server.</i> Optional.';
 	}
 
 	public function render_client_id() {
