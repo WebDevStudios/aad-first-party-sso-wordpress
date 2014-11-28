@@ -197,7 +197,8 @@ class AADSSO_Settings {
 				'author'		=> '',
 				'contributor'	=> '',
 				'subscriber'	=> ''
-			)
+			),
+			'custom_roles'			=> '',
 		);
 
 		$settings = get_option( 'aad-settings' );
@@ -349,28 +350,37 @@ class AADSSO_Settings {
 			'aad-settings',
 			'aad-group-settings'
 		);
+
+		add_settings_field(
+			'custom_roles',
+			__( 'Custom role mapping' ),
+			array( $this, 'render_custom_roles' ),
+			'aad-settings',
+			'aad-group-settings'
+		);
 	}
 
 	public function render_directory_settings_section() {}
 
 	public function render_org_display_name() {
-		echo '<input type="text" id="org_display_name" name="aad-settings[org_display_name]" value="' . $this->org_display_name . '" />';
+		echo '<input type="text" id="org_display_name" name="aad-settings[org_display_name]" value="' . $this->org_display_name . '" class="widefat" />';
 	}
 
 	public function render_org_domain_hint() {
-		echo '<input type="text" id="org_display_hint" hint="aad-settings[org_display_hint]" value="' . $this->org_domain_hint . '" />';
+		echo '<input type="text" id="org_display_hint" hint="aad-settings[org_display_hint]" value="' . $this->org_domain_hint . '" class="widefat" />';
 	}
 
 	public function render_client_id() {
-		echo '<input type="text" id="client_id" name="aad-settings[client_id]" value="' . $this->client_id . '" />';
+		echo '<input type="text" id="client_id" name="aad-settings[client_id]" value="' . $this->client_id . '" class="widefat" />';
 	}
 
 	public function render_client_secret() {
-		echo '<input type="text" id="client_secret" name="aad-settings[client_secret]" value="' . $this->client_secret . '" />';
+		echo '<input type="text" id="client_secret" name="aad-settings[client_secret]" value="' . $this->client_secret . '" class="widefat" />';
 	}
 
 	public function render_override_user_registration() {
-		echo '<input type="checkbox" name="aad-settings[override_user_registration]" ' . checked( $this->override_user_registration, 1, false ) . ' value="1" />';
+		echo '<input type="checkbox" name="aad-settings[override_user_registration]" ' . checked( $this->override_user_registration, 1, false ) . ' value="1" class="widefat" />';
+		echo '<br/><i>Allow new users access to the site regardless of site registration settings</i>';
 	}
 
 	public function render_group_settings_section() {}
@@ -378,26 +388,34 @@ class AADSSO_Settings {
 	public function render_group_map_enabled() {
 		echo '<input type="checkbox" name="aad-settings[group_map_enabled]" ' 
 			. checked( $this->enable_aad_group_to_wp_role, 1, false ) 
-			. ' value="1" />';
+			. ' value="1" class="widefat" />';
+		echo '<br/><i>Match WordPress user role with role from AAD</i>';
 	}
 
 	public function render_group_map_admin() {
-		echo '<input type="text" id="group_map_admin" name="aad-settings[group_map][administrator]" value="' . $this->settings['group_map']['administrator'] . '" />';
+		echo '<input type="text" id="group_map_admin" name="aad-settings[group_map][administrator]" value="' . $this->settings['group_map']['administrator'] . '" class="widefat" />';
 	}
 
 	public function render_group_map_editor() {
-		echo '<input type="text" id="group_map_editor" name="aad-settings[group_map][editor]" value="' . $this->settings['group_map']['editor'] . '" />';
+		echo '<input type="text" id="group_map_editor" name="aad-settings[group_map][editor]" value="' . $this->settings['group_map']['editor'] . '" class="widefat"  />';
 	}
 
 	public function render_group_map_author() {
-		echo '<input type="text" id="group_map_author" name="aad-settings[group_map][author]" value="' . $this->settings['group_map']['author'] . '" />';
+		echo '<input type="text" id="group_map_author" name="aad-settings[group_map][author]" value="' . $this->settings['group_map']['author'] . '" class="widefat" />';
 	}
 
 	public function render_group_map_contributor() {
-		echo '<input type="text" id="group_map_contributor" name="aad-settings[group_map][contributor]" value="' . $this->settings['group_map']['contributor'] . '" />';
+		echo '<input type="text" id="group_map_contributor" name="aad-settings[group_map][contributor]" value="' . $this->settings['group_map']['contributor'] . '" class="widefat" />';
 	}
 
 	public function render_group_map_subscriber() {
-		echo '<input type="text" id="group_map_subscriber" name="aad-settings[group_map][subscriber]" value="' . $this->settings['group_map']['subscriber'] . '" />';
+		echo '<input type="text" id="group_map_subscriber" name="aad-settings[group_map][subscriber]" value="' . $this->settings['group_map']['subscriber'] . '" class="widefat" />';
+	}
+
+	public function render_custom_roles() {
+		echo '<textarea id="custom_roles" class="widefat" name="aad-settings[custom_roles]" rows="10">';
+		echo $this->custom_roles;
+		echo '</textarea>';
+		echo '<br/><i>Additional custom roles that should be mapped in style "[wp_role] [aad_group]". One role per line.</i>';
 	}
 }
