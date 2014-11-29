@@ -2,12 +2,11 @@
 
 A WordPress plugin that allows organizations to use their Azure Active Directory
 user accounts to sign in to WordPress. Organizations with Office 365 already have
-Azure Active Directory and can use this plugin for all of their users.
+Azure Active Directory and can use this plugin for all of their users and any onsite
+Active Directory linked to Azure Active Directory can also be used.
 
-- Security group membership can be used to
-- Can always fall back to regular username and password login.
-
-*This is a work in progress, please feel free to contact me for help.*
+- Security group membership can be mapped to WordPress user roles.
+- Standard WordPress login is still available.
 
 In the typical flow:
 
@@ -34,91 +33,24 @@ For these steps, you must have an Azure subscription with access to the Azure Ac
 1. Sign in to the [Azure portal](https://manage.windowsazure.com), and navigate to the ACTIVE DIRECTORY section. Choose the directory (tenant) that you would like to use. This should be the directory containing the users and (optionally) groups that will have access to your WordPress blog.
 3. Under the APPLICATIONS tab, click ADD to register a new application. Choose 'Add an application my organization is developing', and a recognizable name. Choose values for sign-in URL and App ID URL. The blog's URL is usually a good choice.
 4. When the app is created, under the CONFIGURE tab, generate a key and copy the secret value (it will be visible once only, after you save).
-5. Add a reply URL with the format: `https://<your blog url>/wp-login.php`. Note that this must be HTTPS (with the exception of `http://localhost/...`, which is acceptable for development use).
+5. Add a reply URL with the format: `https://<your blog url>/wp-login.php`. 
 
 ### 3. Configure the plugin
 
-Configuration of the AADSSO plugin is currently done in a `Settings.json` file. This repo contains a `Settings.template.json` file that can be used as an example. Make a copy and rename it as `Settings.json`.
-
-The minimal fields required are:
-
-- `org_display_name` The display name of the organization, used only in the link in the login page.
-- `client_id` The application's client ID (from the application configuration page)
-- `client_secret` The client secret key (from the application configuration page)
-- `field_to_match_to_upn` The WordPress field which will be used to match a UserPrincipalName (from AAD) to a WordPress user. Valid options are 'login', 'email' or 'slug'.
-
+The plugin can be configured in Settings > AAD Settings.
 
 ### 4. (Optional) Set WordPress roles based on Azure AD group membership
 
 The AADSSO plugin can be configured to set different WordPress roles based on the user's membership to a set of user-defined groups. This is a great way to control who has access to the blog, and under what role.
 
-The configuration is also done in `Settings.json`. The following fields should be included:
+The configuration is also done in Settings > AAD Settings
 
-- `enable_aad_group_to_wp_role` Must be set to `true` to enable group-based roles.
-- `aad_group_to_wp_role_map` Contains a key-value map of Azure Active Directory group object IDs (the keys) and WordPress roles (values). Valid values for roles are `'administrator'`, `'editor'`, `'author'`, `'contributor'`, `'subscriber'` and `''` (empty string).
-- `default_wp_role` If a user signs in but is not a member of any groups defined in `aad_group_to_wp_role_map`, they are given this role in WordPress. If this is NULL (default) access will be denied.
-
-## Example `Settings.json` files
-
-The different fields that can be defined in `Settings.json` are documented in `Settings.php`. The following may give you an idea of the typical scenarios that may be encountered.
-
-*Note: This will all eventually be replaced with a friendlier interface using WordPress settings.*
-
-### Minimal
-
-Users are matched by their email address in WordPress, and whichever role they have in WordPress is maintained.
-
-	{
-		"org_display_name": "Contoso",
-
-		"client_id":     "9054eff5-bfef-4cc5-82fd-8c35534e48f9",
-		"client_secret": "NTY5MmE5YjMwMGY2MWQ0NjU5MzYxNjdjNzE1OGNiZmY=",
-
-		"field_to_match_to_upn": "email"
-	}
+- Enable role mapping must be checked.
+- Each role contains a key-value map of Azure Active Directory group object IDs (the keys) and WordPress roles (values). Valid values for roles are `'administrator'`, `'editor'`, `'author'`, `'contributor'`, `'subscriber'`.
+- Custom WordPress roles to Activie Directory groups can be added in the Custom role mapping box by placing one mapping per line in the format: wp_role aad_group.
 
 ### Groups membership-based roles (no default role)
 
-Users are matched by their login names in WordPress, and WordPress roles are dictated by membership to a given Azure AD group.
+Users are matched by their login names in WordPress, and WordPress roles are dictated by membership to a given Azure AD group. If the user is not a part of any of these groups, they are assigned the `default new user role in WordPress.
 
-	{
-		"org_display_name": "Contoso",
 
-		"client_id":     "9054eff5-bfef-4cc5-82fd-8c35534e48f9",
-		"client_secret": "NTY5MmE5YjMwMGY2MWQ0NjU5MzYxNjdjNzE1OGNiZmY=",
-
-		"field_to_match_to_upn": "login",
-
-		"enable_aad_group_to_wp_role": true,
-		"default_wp_role": null,
-		"aad_group_to_wp_role_map": {
-			"5d1915c4-2373-42ba-9796-7c092fa1dfc6": "administrator",
-			"21c0f87b-4b65-48c1-9231-2f9295ef601c": "editor",
-			"f5784693-11e5-4812-87db-8c6e51a18ffd": "author",
-			"780e055f-7e64-4e34-9ff3-012910b7e5ad": "contributor",
-			"f1be9515-0aeb-458a-8c0a-30a03c1afb67": "subscriber"
-		}
-	}
-
-### Groups membership-based roles (with default role)
-
-Users are matched by their login names in WordPress, and WordPress roles are dictated by membership to a given Azure AD group. If the user is not a part of any of these groups, they are assigned the `author` role.
-
-	{
-		"org_display_name": "Contoso",
-
-		"client_id":     "9054eff5-bfef-4cc5-82fd-8c35534e48f9",
-		"client_secret": "NTY5MmE5YjMwMGY2MWQ0NjU5MzYxNjdjNzE1OGNiZmY=",
-
-		"field_to_match_to_upn": "login",
-
-		"enable_aad_group_to_wp_role": true,
-		"default_wp_role": "author",
-		"aad_group_to_wp_role_map": {
-			"5d1915c4-2373-42ba-9796-7c092fa1dfc6": "administrator",
-			"21c0f87b-4b65-48c1-9231-2f9295ef601c": "editor",
-			"f5784693-11e5-4812-87db-8c6e51a18ffd": "author",
-			"780e055f-7e64-4e34-9ff3-012910b7e5ad": "contributor",
-			"f1be9515-0aeb-458a-8c0a-30a03c1afb67": "subscriber"
-		}
-	}
