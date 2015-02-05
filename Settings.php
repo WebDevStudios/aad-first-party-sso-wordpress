@@ -185,32 +185,45 @@ class AADSSO_Settings {
 
 	private function importSettingsFromDB() {
 		$defaults = array(
-			'org_display_name' 		=> $this->org_display_name,
-			'org_domain_hint'		=> $this->org_domain_hint,
-			'client_id' 			=> $this->client_id,
-			'client_secret' 		=> $this->client_secret,
-
-			'enable_group_to_role'	=> $this->aad_group_to_wp_role_map,
-			'group_map'				=> array (
-				'administrator'	=> '',
-				'editor'		=> '',
-				'author'		=> '',
-				'contributor'	=> '',
-				'subscriber'	=> ''
-			),
-			'custom_roles'			=> '',
+			'org_display_name'     => $this->org_display_name,
+			'org_domain_hint'      => $this->org_domain_hint,
+			'client_id'            => $this->client_id,
+			'client_secret'        => $this->client_secret,
+			'enable_group_to_role' => $this->aad_group_to_wp_role_map,
+			'custom_roles'         => '',
+			'group_map'            => array(),
 		);
 
-		$settings = get_option( 'aad-settings' );
-	
+		$settings = get_option( 'aad-settings', array() );
 
-		$custom_roles = explode( "\n", trim( $settings['custom_roles'] ) );
-		foreach( $custom_roles as $role ) {
-			$role = explode( ' ', trim( $role ) );
-			$settings['group_map'][$role[0]] = $role[1];
+		$group_map = array();
+		// If custom roles exist
+		if ( ( isset( $settings['custom_roles'] ) && $settings['custom_roles'] && is_string( $settings['custom_roles'] ) ) ) {
+
+			// Get rows
+			$custom_roles = explode( "\n", trim( $settings['custom_roles'] ) );
+			// Let's add them to our group map
+			foreach( (array) $custom_roles as $role ) {
+				if ( $role ) {
+					// get role/aad-role
+					$role = explode( ' ', trim( $role ) );
+					if ( isset( $role[0], $role[1] ) ) {
+						// Add to our role map
+						$group_map[ $role[0] ] = $role[1];
+					}
+				}
+			}
 		}
-//echo '<pre>'; var_dump( $settings );
-		$settings = wp_parse_args( $settings, $defaults );
+
+		$settings = wp_parse_args( (array) $settings, $defaults );
+		// Ensure we have all the group mapping parts
+		$settings['group_map'] = wp_parse_args( $group_map, array(
+			'administrator' => '',
+			'editor'        => '',
+			'author'        => '',
+			'contributor'   => '',
+			'subscriber'    => '',
+		) );
 
 		// Store the whole chunk of settings
 		$this->settings = $settings;
@@ -395,8 +408,8 @@ class AADSSO_Settings {
 	public function render_group_settings_section() {}
 
 	public function render_group_map_enabled() {
-		echo '<input type="checkbox" name="aad-settings[group_map_enabled]" ' 
-			. checked( $this->enable_aad_group_to_wp_role, 1, false ) 
+		echo '<input type="checkbox" name="aad-settings[group_map_enabled]" '
+			. checked( $this->enable_aad_group_to_wp_role, 1, false )
 			. ' value="1" class="widefat" />';
 		echo '<br/><i>Match WordPress user role with role from AAD</i>';
 	}
