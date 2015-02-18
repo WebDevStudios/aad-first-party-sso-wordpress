@@ -108,12 +108,12 @@ class AADSSO_Settings {
 	/**
 	 * @var string The URI of the Azure Active Directory Graph API.
 	 */
-	public $resourceURI =           'https://graph.windows.net';
+	public $resourceURI = 'https://graph.windows.net';
 
 	/**
 	 * @var string The version of the AAD Graph API to use.
 	 */
-	public $graphVersion =          '2013-11-08';
+	public $graphVersion = '2013-11-08';
 
 	/**
 	 * @var boolean allows site admins to set the plugin to override the user registration
@@ -195,6 +195,7 @@ class AADSSO_Settings {
 		);
 
 		$settings = get_option( 'aad-settings', array() );
+		$settings = wp_parse_args( (array) $settings, $defaults );
 
 		$group_map = array();
 		// If custom roles exist
@@ -215,9 +216,8 @@ class AADSSO_Settings {
 			}
 		}
 
-		$settings = wp_parse_args( (array) $settings, $defaults );
 		// Ensure we have all the group mapping parts
-		$settings['group_map'] = wp_parse_args( $group_map, array(
+		$settings['group_map'] = wp_parse_args( array_unique( array_merge( $settings['group_map'], $group_map ) ), array(
 			'administrator' => '',
 			'editor'        => '',
 			'author'        => '',
@@ -247,6 +247,7 @@ class AADSSO_Settings {
 			update_option( 'aad-group-map-set', 1 );
 			$this->enable_aad_group_to_wp_role = true;
 		}
+
 	}
 
 	public function add_menus() {
