@@ -247,14 +247,25 @@ class AADSSO {
 		wp_enqueue_style( 'aad-sso-wordpress', AADSSO_PLUGIN_URL . '/login.css' );
 	}
 
-	function printLoginLink() {
-		$html = <<<EOF
-			<p class="aadsso-login-form-text">
-				<a href="%s">Sign in with your %s account</a><br />
-				<a class="dim" href="%s">Sign out</a>
-			</p>
-EOF;
-		printf ( $html, $this->getLoginUrl(), htmlentities( $this->settings->org_display_name ), $this->getLogoutUrl() );
+	function printLoginLink( $login_text = '', $show_logout = true, $echo = true ) {
+		if ( '' === $login_text ) {
+			$login_text = 'Sign in with your ' . htmlentities( $this->settings->org_display_name ) . ' account';	
+		}
+		
+		$html = '<p class="aadsso-login-form-text">';	
+		$html .= '<a href="' . $this->getLoginUrl() . '">' . $login_text . '</a><br />';
+				
+		if ( $show_logout ) {
+			$html .= '<a class="dim" href="' . $this->getLogoutUrl() . '">' . __( 'Sign out' ) . '</a>';
+		}
+		
+		$html .= '</p>';
+		
+		if ( $echo ) {
+			echo $html;
+		} else {
+			return $html;
+		}
 	}
 } // end class
 
