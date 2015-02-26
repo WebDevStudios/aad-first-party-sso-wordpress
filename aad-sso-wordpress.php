@@ -55,6 +55,8 @@ class AADSSO {
 		add_action( 'wp_logout', array( $this, 'clearSession' ) );
 
 		add_action( 'login_init', array( $this, 'maybeBypassLogin' ) );
+		
+		add_shortcode( 'aadsso_login_link', array( $this, 'printLoginLink' ) );
 	}
 
 	public static function getInstance() {
@@ -247,10 +249,10 @@ class AADSSO {
 		wp_enqueue_style( 'aad-sso-wordpress', AADSSO_PLUGIN_URL . '/login.css' );
 	}
 
-	function printLoginLink( $login_text = '', $show_logout = true, $echo = true ) {
-		if ( '' === $login_text ) {
-			$login_text = 'Sign in with your ' . htmlentities( $this->settings->org_display_name ) . ' account';	
-		}
+	function printLoginLink() {
+		$login_text = apply_filters( 'aadsso_login_text', 'Sign in with your ' . htmlentities( $this->settings->org_display_name ) . ' account' );
+		$show_logout = apply_filters( 'aadsso_show_logout', true );
+		$echo = apply_filters( 'aadsso_echo_login_link', true );
 		
 		$html = '<p class="aadsso-login-form-text">';	
 		$html .= '<a href="' . $this->getLoginUrl() . '">' . $login_text . '</a><br />';
