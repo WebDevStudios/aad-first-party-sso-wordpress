@@ -55,8 +55,6 @@ class AADSSO {
 		add_action( 'wp_logout', array( $this, 'clearSession' ) );
 
 		add_action( 'login_init', array( $this, 'maybeBypassLogin' ) );
-		
-		add_shortcode( 'aadsso_login_link', array( $this, 'printLoginLink' ) );
 	}
 
 	public static function getInstance() {
@@ -248,26 +246,24 @@ class AADSSO {
 	function printLoginCss() {
 		wp_enqueue_style( 'aad-sso-wordpress', AADSSO_PLUGIN_URL . '/login.css' );
 	}
+	
+	public function printLoginLink() {
+		echo $this->getLoginLink();
+	}
 
-	function printLoginLink() {
-		$login_text = apply_filters( 'aadsso_login_text', 'Sign in with your ' . htmlentities( $this->settings->org_display_name ) . ' account' );
-		$show_logout = apply_filters( 'aadsso_show_logout', true );
-		$echo = apply_filters( 'aadsso_echo_login_link', true );
+	function getLoginLink() {
+		$login_url = $this->getLoginUrl();
+		$logout_url = $this->getLogoutUrl();
+		$org_display_name = $this->settings->org_display_name;
 		
-		$html = '<p class="aadsso-login-form-text">';	
-		$html .= '<a href="' . $this->getLoginUrl() . '">' . $login_text . '</a><br />';
-				
-		if ( $show_logout ) {
-			$html .= '<a class="dim" href="' . $this->getLogoutUrl() . '">' . __( 'Sign out' ) . '</a>';
-		}
-		
-		$html .= '</p>';
-		
-		if ( $echo ) {
-			echo $html;
-		} else {
-			return $html;
-		}
+		$html = <<<EOF
+			<p class="aadsso-login-form-text">
+				<a href="%s">Sign in with your %s account</a><br />
+				<a class="dim" href="%s">Sign out</a>
+			</p>
+EOF;
+		$html = sprintf( $html, $login_url, htmlentities( $org_display_name ), $logout_url );
+		return apply_filters( 'aad_sso_login_link', $html, $login_url, $logout_url, $org_display_name );
 	}
 } // end class
 
