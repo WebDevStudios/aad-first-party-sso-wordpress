@@ -389,7 +389,7 @@ class AADSSO_Settings {
 	}
 
 	public function render_org_domain_hint() {
-		echo '<input type="text" id="org_domain_hint" hint="aad-settings[org_domain_hint]" value="' . $this->org_domain_hint . '" class="widefat" />';
+		echo '<input type="text" id="org_domain_hint" name="aad-settings[org_domain_hint]" value="' . $this->org_domain_hint . '" class="widefat" />';
 		echo '<br/><i>I.E.</i> microsoft.com <i>. Sent to AAD to prepopulate AD server.</i> Optional.';
 	}
 
