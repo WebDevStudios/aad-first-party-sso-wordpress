@@ -246,7 +246,7 @@ class AADSSO {
 	function printLoginCss() {
 		wp_enqueue_style( 'aad-sso-wordpress', AADSSO_PLUGIN_URL . '/login.css' );
 	}
-	
+
 	public function printLoginLink() {
 		echo $this->getLoginLink();
 	}
@@ -255,7 +255,7 @@ class AADSSO {
 		$login_url = $this->getLoginUrl();
 		$logout_url = $this->getLogoutUrl();
 		$org_display_name = $this->settings->org_display_name;
-		
+
 		$html = <<<EOF
 			<p class="aadsso-login-form-text">
 				<a href="%s">Sign in with your %s account</a><br />
