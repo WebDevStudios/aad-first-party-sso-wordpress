@@ -9,7 +9,7 @@ Version: 0.2c
 Author URI: http://psignoret.com/
 */
 
-defined('ABSPATH') or die("No script kiddies please!");
+defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 define( 'AADSSO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'AADSSO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -23,9 +23,9 @@ require_once AADSSO_PLUGIN_DIR . 'lib/php-jwt/Authentication/JWT.php';
 
 class AADSSO {
 
-	static $instance = FALSE;
+	static $instance = false;
 
-	private $settings = NULL;
+	private $settings = null;
 	const ANTIFORGERY_ID_KEY = 'antiforgery-id';
 
 	public function __construct() {
@@ -49,7 +49,7 @@ class AADSSO {
 		add_action( 'login_enqueue_scripts', array( $this, 'printLoginCss' ) );
 
 		// Add the link to the organization's sign-in page
-		add_action( 'login_form', array( $this, 'printLoginLink' ) ) ;
+		add_action( 'login_form', array( $this, 'printLoginLink' ) );
 
 		// Clear session variables when logging out
 		add_action( 'wp_logout', array( $this, 'clearSession' ) );
@@ -75,7 +75,7 @@ class AADSSO {
 		 * login is set then we need to ensure we do not auto-forward the user and get
 		 * them stuck in an infinite logout loop.
 		 */
-		if( $this->wantsToLogin()  && $bypass && !isset( $_GET['code'] ) ) {
+		if ( $this->wantsToLogin() && $bypass && ! isset( $_GET['code'] ) ) {
 			wp_redirect( $this->getLoginUrl() );
 			die();
 		}
@@ -98,7 +98,7 @@ class AADSSO {
 		$action = isset($_REQUEST['action']) ? $_REQUEST['action'] : 'login';
 		// And now the exceptions
 		$action = isset( $_GET['loggedout'] ) ? 'loggedout' : $action;
-		if( 'login' == $action ) {
+		if ( 'login' == $action ) {
 			$wants_to_login = true;
 		}
 		return $wants_to_login;
@@ -120,7 +120,7 @@ class AADSSO {
 
 			if ( isset( $_GET['error'] ) ) {
 				// The attempt to get an authorization code failed (i.e., the reply from the STS was "No.")
-				return new WP_Error( $_GET['error'], sprintf( 'ERROR: Access denied to Azure Active Directory. %s', $_GET['error_description']) );
+				return new WP_Error( $_GET['error'], sprintf( 'ERROR: Access denied to Azure Active Directory. %s', $_GET['error_description'] ) );
 			}
 
 			return $user;
@@ -184,14 +184,14 @@ class AADSSO {
 			'user_login' => $jwt->upn,
 			'first_name' => $jwt->given_name,
 			'last_name'  => $jwt->family_name,
-			'user_pass'  => null
+			'user_pass'  => null,
 		);
 
 		$new_user_id = wp_insert_user( $userdata );
 
 		$user = new WP_User( $new_user_id );
 
-		if( $this->settings->enable_aad_group_to_wp_role ) {
+		if ( $this->settings->enable_aad_group_to_wp_role ) {
 			$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
 		}
 
@@ -212,7 +212,7 @@ class AADSSO {
 		// TODO: Check for error in the group membership response
 		$role_to_set = $this->settings->default_wp_role;
 		if ( ! empty($group_memberships->value ) ) {
-			foreach ( $this->settings->aad_group_to_wp_role_map as $aad_group => $wp_role) {
+			foreach ( $this->settings->aad_group_to_wp_role_map as $aad_group => $wp_role ) {
 				if ( in_array( $aad_group, $group_memberships->value ) ) {
 					$role_to_set = $wp_role;
 					break;
@@ -220,9 +220,9 @@ class AADSSO {
 			}
 		}
 
-		if ( NULL != $role_to_set ) {
+		if ( null != $role_to_set ) {
 			// Set the role on the WordPress user
-			$user->set_role($role_to_set);
+			$user->set_role( $role_to_set );
 		} else {
 			$token = AADSSO_AuthorizationHelper::getAccessToken( $_GET['code'], $this->settings );
 			$jwt = AADSSO_AuthorizationHelper::validateIdToken( $token->id_token, $this->settings, $_SESSION[ self::ANTIFORGERY_ID_KEY ] );
@@ -248,10 +248,10 @@ class AADSSO {
 
 	function printDebug() {
 		if ( isset( $_SESSION['aadsso_debug'] ) ) {
-			echo '<pre>'. print_r( $_SESSION['aadsso_var'], TRUE ) . '</pre>';
+			echo '<pre>'. print_r( $_SESSION['aadsso_var'], true ) . '</pre>';
 		}
-		echo '<p>DEBUG</p><pre>' . print_r( $_SESSION, TRUE ) . '</pre>';
-		echo '<pre>' . print_r( $_GET, TRUE ) . '</pre>';
+		echo '<p>DEBUG</p><pre>' . print_r( $_SESSION, true ) . '</pre>';
+		echo '<pre>' . print_r( $_GET, true ) . '</pre>';
 	}
 
 	function printLoginCss() {
@@ -284,7 +284,7 @@ $aadsso = AADSSO::getInstance();
 if ( ! function_exists( 'com_create_guid' ) ) {
 	function com_create_guid(){
 		mt_srand( (double) microtime() * 10000 ); //optional for php 4.2.0 and up.
-		$charid = strtoupper( md5( uniqid( rand(), true ) ) 	);
+		$charid = strtoupper( md5( uniqid( rand(), true ) ) );
 		$hyphen = chr( 45 ); // "-"
 		$uuid = chr( 123 ) . // "{"
 			substr( $charid, 0, 8 ) . $hyphen .
