@@ -219,7 +219,7 @@ class AADSSO {
 		// Determine which WordPress role the AAD group corresponds to.
 		// TODO: Check for error in the group membership response
 		$role_to_set = $this->settings->default_wp_role;
-		if ( ! empty($group_memberships->value ) ) {
+		if ( ! empty( $group_memberships->value ) ) {
 			foreach ( $this->settings->aad_group_to_wp_role_map as $aad_group => $wp_role ) {
 				if ( in_array( $aad_group, $group_memberships->value ) ) {
 					$role_to_set = $wp_role;
