@@ -112,76 +112,87 @@ class AADSSO {
 
 	function authenticate( $user, $username, $password ) {
 		// Don't re-authenticate if already authenticated
-		if ( is_a( $user, 'WP_User' ) ) { return $user; }
+		if ( is_a( $user, 'WP_User' ) ) {
+			return $user;
+		}
 
-		if ( isset( $_GET['code'] ) ) {
-			if ( ! isset( $_GET['state'] ) || $_GET['state'] != $_SESSION[ self::ANTIFORGERY_ID_KEY ] ) {
-				return new WP_Error( 'antiforgery_id_mismatch', sprintf( 'ANTIFORGERY_ID_KEY mismatch. Expecting %s', $_SESSION[ self::ANTIFORGERY_ID_KEY ] ) );
+		if ( ! isset( $_GET['code'] ) ) {
+
+			if ( isset( $_GET['error'] ) ) {
+				// The attempt to get an authorization code failed (i.e., the reply from the STS was "No.")
+				return new WP_Error( $_GET['error'], sprintf( 'ERROR: Access denied to Azure Active Directory. %s', $_GET['error_description']) );
 			}
 
-			// Looks like we got an authorization code, let's try to get an access token
-			$token = AADSSO_AuthorizationHelper::getAccessToken( $_GET['code'], $this->settings );
+			return $user;
+		}
 
-			// Happy path
-			if ( isset( $token->access_token ) ) {
+		if ( ! isset( $_GET['state'] ) || $_GET['state'] != $_SESSION[ self::ANTIFORGERY_ID_KEY ] ) {
+			return new WP_Error( 'antiforgery_id_mismatch', sprintf( 'ANTIFORGERY_ID_KEY mismatch. Expecting %s', $_SESSION[ self::ANTIFORGERY_ID_KEY ] ) );
+		}
 
-				try {
-					$jwt = AADSSO_AuthorizationHelper::validateIdToken( $token->id_token, $this->settings, $_SESSION[ self::ANTIFORGERY_ID_KEY ] );
-				} catch ( Exception $e ) {
-					return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
-				}
+		// Looks like we got an authorization code, let's try to get an access token
+		$token = AADSSO_AuthorizationHelper::getAccessToken( $_GET['code'], $this->settings );
 
-				// Try to find an existing user in WP where the UPN of the currect AAD user is
-				// (depending on config) the 'login' or 'email' field
-				$user = get_user_by( $this->settings->field_to_match_to_upn, $jwt->upn );
+		if ( ! isset( $token->access_token ) ) {
 
-				if ( is_a( $user, 'WP_User' ) ) {
-					// At this point, we have an authorization code, an access token and the user exists in WordPress.
-					// All that's left is to set the roles based on group membership.
-					if ( $this->settings->enable_aad_group_to_wp_role ) {
-						$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
-					}
-				} else {
-					/*
-					 * No user found. Now decide if we are allowed to create a new
-					 * user or not. Will use the WordPress setting from Settings > General
-					 *
-					 */
-					$reg_open = get_option( 'users_can_register' );
-					$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration );
-
-					if( $reg_open || $override_reg ) {
-						// Setup the minimum required user data
-						$userdata = array(
-							'user_email' => $jwt->upn, // Hopefully this stays the email!
-							'user_login' => $jwt->upn,
-							'first_name' => $jwt->given_name,
-							'last_name'  => $jwt->family_name,
-							'user_pass'  => null
-						);
-
-						$new_user_id = wp_insert_user( $userdata );
-
-						$user = new WP_User( $new_user_id );
-
-						if( $this->settings->enable_aad_group_to_wp_role ) {
-							$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
-						}
-					} else {
-						$user = new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->upn ) );
-					}
-				}
-			} elseif ( isset( $token->error ) ) {
+			if ( isset( $token->error ) ) {
 				// Unable to get an access token (although we did get an authorization code)
-				$user = new WP_Error( $token->error, sprintf( 'ERROR: Could not get an access token to Azure Active Directory. %s', $token->error_description ) );
-			} else {
-				// None of the above, I have no idea what happened.
-				$user = new WP_Error( 'unknown', 'ERROR: An unknown error occured.' );
+				return new WP_Error( $token->error, sprintf( 'ERROR: Could not get an access token to Azure Active Directory. %s', $token->error_description ) );
 			}
 
-		} elseif ( isset( $_GET['error'] ) ) {
-			// The attempt to get an authorization code failed (i.e., the reply from the STS was "No.")
-			$user = new WP_Error( $_GET['error'], sprintf( 'ERROR: Access denied to Azure Active Directory. %s', $_GET['error_description']) );
+			// None of the above, I have no idea what happened.
+			return new WP_Error( 'unknown', 'ERROR: An unknown error occured.' );
+		}
+
+		// Happy path
+
+		try {
+			$jwt = AADSSO_AuthorizationHelper::validateIdToken( $token->id_token, $this->settings, $_SESSION[ self::ANTIFORGERY_ID_KEY ] );
+		} catch ( Exception $e ) {
+			return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
+		}
+
+		// Try to find an existing user in WP where the UPN of the currect AAD user is
+		// (depending on config) the 'login' or 'email' field
+		$user = get_user_by( $this->settings->field_to_match_to_upn, $jwt->upn );
+
+		if ( is_a( $user, 'WP_User' ) ) {
+			// At this point, we have an authorization code, an access token and the user exists in WordPress.
+			// All that's left is to set the roles based on group membership.
+			if ( $this->settings->enable_aad_group_to_wp_role ) {
+				$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
+			}
+
+			return $user;
+		}
+
+		/*
+		 * No user found. Now decide if we are allowed to create a new
+		 * user or not. Will use the WordPress setting from Settings > General
+		 *
+		 */
+		$reg_open = get_option( 'users_can_register' );
+		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration );
+
+		if ( ! $reg_open && ! $override_reg ) {
+			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->upn ) );
+		}
+
+		// Setup the minimum required user data
+		$userdata = array(
+			'user_email' => $jwt->upn, // Hopefully this stays the email!
+			'user_login' => $jwt->upn,
+			'first_name' => $jwt->given_name,
+			'last_name'  => $jwt->family_name,
+			'user_pass'  => null
+		);
+
+		$new_user_id = wp_insert_user( $userdata );
+
+		$user = new WP_User( $new_user_id );
+
+		if( $this->settings->enable_aad_group_to_wp_role ) {
+			$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
 		}
 
 		return $user;
