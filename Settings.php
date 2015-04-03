@@ -248,6 +248,7 @@ class AADSSO_Settings {
 			$this->enable_aad_group_to_wp_role = true;
 		}
 
+		$this->default_wp_role = isset( $settings['default_wp_role'] ) ? $settings['default_wp_role'] : $this->default_wp_role;
 	}
 
 	public function add_menus() {
@@ -333,6 +334,14 @@ class AADSSO_Settings {
 		);
 
 		add_settings_field(
+			'default_wp_role',
+			__( 'Default role' ),
+			array( $this, 'render_default_wp_role' ),
+			'aad-settings',
+			'aad-group-settings'
+		);
+
+		add_settings_field(
 			'group_map_admin',
 			__( 'Administrator' ),
 			array( $this, 'render_group_map_admin' ),
@@ -413,6 +422,14 @@ class AADSSO_Settings {
 			. checked( $this->enable_aad_group_to_wp_role, 1, false )
 			. ' value="1" class="widefat" />';
 		echo '<br/><i>Match WordPress user role with role from AAD</i>';
+	}
+
+	public function render_default_wp_role() {
+		echo '<select name="aad-settings[default_wp_role]" id="new_role">';
+		echo '<option value="">No Role</option>';
+		wp_dropdown_roles( $this->default_wp_role );
+		echo '</select>';
+		// echo '<br/><i>If no role is selected, a user will not be added.</i>';
 	}
 
 	public function render_group_map_admin() {
