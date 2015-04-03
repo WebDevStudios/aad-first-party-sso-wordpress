@@ -178,14 +178,22 @@ class AADSSO {
 			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->upn ) );
 		}
 
+		$username = explode( '@', $jwt->upn );
+		$username = $username[0];
+
 		// Setup the minimum required user data
 		$userdata = array(
-			'user_email' => $jwt->upn, // Hopefully this stays the email!
-			'user_login' => $jwt->upn,
-			'first_name' => $jwt->given_name,
-			'last_name'  => $jwt->family_name,
-			'user_pass'  => null,
+			'user_login'   => wp_slash( $username ), // Hopefully this stays the email!
+			'user_email'   => wp_slash( $jwt->upn ),
+			'user_pass'    => wp_generate_password( 12, true ),
+			'first_name'   => isset( $jwt->given_name ) ? esc_html( $jwt->given_name ) : '',
+			'last_name'    => isset( $jwt->family_name ) ? esc_html( $jwt->family_name ) : '',
+			'role'         => 'subscriber',
 		);
+
+		$userdata['display_name'] = $userdata['nickname'] = $userdata['first_name'] && $userdata['last_name']
+			? $userdata['first_name'] . ' ' . $userdata['last_name']
+			: $userdata['first_name'];
 
 		$new_user_id = wp_insert_user( $userdata );
 
