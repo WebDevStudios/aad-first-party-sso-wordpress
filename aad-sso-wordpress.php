@@ -198,6 +198,10 @@ class AADSSO {
 		$username = explode( '@', $jwt->upn );
 		$username = apply_filters( 'aad_sso_login_username', $username[0], $jwt );
 
+		$username = get_user_by( 'login', $username )
+			? 'aadsso-'. sanitize_text_field( $jwt->oid )
+			: $username;
+
 		// Setup the minimum required user data
 		$userdata = array(
 			'user_login'   => wp_slash( $username ), // Hopefully this stays the email!
