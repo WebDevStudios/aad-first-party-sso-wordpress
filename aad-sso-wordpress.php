@@ -218,8 +218,8 @@ class AADSSO {
 
 		// Setup the minimum required user data
 		$userdata = array(
-			'user_login'   => wp_slash( $username ), // Hopefully this stays the email!
-			'user_email'   => wp_slash( $jwt->upn ),
+			'user_login'   => wp_slash( $username ),
+			'user_email'   => wp_slash( $this->determine_email( $jwt ) ),
 			'user_pass'    => wp_generate_password( 12, true ),
 			'first_name'   => isset( $jwt->given_name ) ? esc_html( $jwt->given_name ) : '',
 			'last_name'    => isset( $jwt->family_name ) ? esc_html( $jwt->family_name ) : '',
@@ -246,6 +246,41 @@ class AADSSO {
 		}
 
 		return $user;
+	}
+
+	public function determine_email( $jwt ) {
+		AADSSO_GraphHelper::$settings = $this->settings;
+		AADSSO_GraphHelper::$tenant_id = $jwt->tid;
+
+		$ad_user_data = AADSSO_GraphHelper::getMe();
+
+		if ( is_wp_error( $ad_user_data ) ) {
+			return $jwt->upn;
+		}
+
+		// Override the priority of the keys which get checked
+		$keys_in_order          = apply_filters( 'aad_sso_emails_from_graph_check_order', array( 'proxyAddresses', 'mail', 'otherMails', 'userPrincipalName' ) );
+		$keys_with_array_values = apply_filters( 'aad_sso_emails_keys_with_array_values', array( 'proxyAddresses', 'otherMails' ) );
+
+		foreach ( $keys_in_order as $key ) {
+
+			if ( ! isset( $ad_user_data->{$key} ) || empty( $ad_user_data->{$key} ) ) {
+				continue;
+			}
+
+			if (
+				in_array( $key, $keys_with_array_values )
+				&& is_array( $ad_user_data->{$key} )
+			) {
+				return reset( $ad_user_data->{$key} );
+			}
+
+			if ( ! is_array( $ad_user_data->{$key} ) ) {
+				return $ad_user_data->{$key};
+			}
+		}
+
+		return $jwt->upn;
 	}
 
 	// Users AAD group memberships to set WordPress role
