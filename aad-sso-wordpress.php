@@ -69,7 +69,7 @@ class AADSSO {
 
 	/**
 	 * Decides wether or not to bypass the login form and forward straight to AAD login
-	 **/
+	 */
 	public function maybeBypassLogin() {
 		$bypass = apply_filters( 'aad_auto_forward_login', false );
 
@@ -93,16 +93,16 @@ class AADSSO {
 	}
 
 	/**
-	* Checks to determine if the user wants to login on wp-login
-	*
-	* This function mostly exists to cover the exceptions to login
-	* that may exist as other parameters to $_GET[action] as $_GET[action]
-	* does not have to exist. By default WordPress assumes login if an action
-	* is not set, however this may not be true, as in the case of logout
-	* where $_GET[loggedout] is instead set
-	*
-	* @return boolean
-	**/
+	 * Checks to determine if the user wants to login on wp-login
+	 *
+	 * This function mostly exists to cover the exceptions to login
+	 * that may exist as other parameters to $_GET[action] as $_GET[action]
+	 * does not have to exist. By default WordPress assumes login if an action
+	 * is not set, however this may not be true, as in the case of logout
+	 * where $_GET[loggedout] is instead set
+	 *
+	 * @return boolean
+	 */
 	private function wantsToLogin() {
 		$wants_to_login = false;
 		// Cover default WordPress behavior
@@ -187,7 +187,6 @@ class AADSSO {
 		/*
 		 * No user found. Now decide if we are allowed to create a new
 		 * user or not. Will use the WordPress setting from Settings > General
-		 *
 		 */
 		$reg_open = get_option( 'users_can_register' );
 		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration );
