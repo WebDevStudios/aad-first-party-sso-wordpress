@@ -55,6 +55,9 @@ class AADSSO {
 		add_action( 'wp_logout', array( $this, 'clearSession' ) );
 
 		add_action( 'login_init', array( $this, 'maybeBypassLogin' ) );
+
+		// Redirect user back to original location
+		add_filter( 'login_redirect', array( $this, 'redirect_after_login' ), 20, 3 );
 	}
 
 	public static function getInstance() {
@@ -79,6 +82,14 @@ class AADSSO {
 			wp_redirect( $this->getLoginUrl() );
 			die();
 		}
+	}
+
+	public function redirect_after_login( $redirect_to, $requested_redirect_to, $user ) {
+		if ( is_a( $user, 'WP_User' ) && isset( $_SESSION['redirect_to'] ) ) {
+			$redirect_to = $_SESSION['redirect_to'];
+		}
+
+		return $redirect_to;
 	}
 
 	/**
@@ -259,6 +270,7 @@ class AADSSO {
 	function getLoginUrl() {
 		$antiforgery_id = com_create_guid();
 		$_SESSION[ self::ANTIFORGERY_ID_KEY ] = $antiforgery_id;
+		$_SESSION['redirect_to'] = remove_query_arg( 'blarg' );
 		return AADSSO_AuthorizationHelper::getAuthorizationURL( $this->settings, $antiforgery_id );
 	}
 
