@@ -21,6 +21,10 @@ class AADSSO_GraphHelper {
 		return self::getRequest( $url );
 	}
 
+	public static function getGroups() {
+		return self::getRequest( self::getResourceUrl() . '/groups?api-version=' . self::$settings->graphVersion );
+	}
+
 	public static function userCheckMemberGroups( $id, $group_ids ) {
 		$group_ids = array_filter( $group_ids ); //remove empty elements
 		$url = self::getResourceUrl() . '/users/' . $id . '/checkMemberGroups?api-version=' . self::$settings->graphVersion;
