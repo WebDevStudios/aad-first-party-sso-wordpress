@@ -12,7 +12,7 @@ In the typical flow:
 
 1. User attempts to access the admin section of the blog (`wp-admin`). At the sign in page, they are given a link to sign in with their Azure Active Directory organization account (e.g. an Office 365 account).
 2. After signing in, the user is redirected back to the blog with a JSON Web Token (JWT), containing a minimal set of claims.
-3. The plugin uses these claims to attempt to find a WordPress user with an email address or login name that matches the Azure Active Directory user.
+3. The plugin uses these claims to attempt to find a WordPress user with the Azure AD ID that matches the Azure Active Directory user.
 4. If one is found, the user is authenticated in WordPress as that user.
 5. (Optional) Membership to certain groups in Azure AD can be mapped to roles in WordPress.
 
@@ -33,7 +33,7 @@ For these steps, you must have an Azure subscription with access to the Azure Ac
 1. Sign in to the [Azure portal](https://manage.windowsazure.com), and navigate to the ACTIVE DIRECTORY section. Choose the directory (tenant) that you would like to use. This should be the directory containing the users and (optionally) groups that will have access to your WordPress blog.
 3. Under the APPLICATIONS tab, click ADD to register a new application. Choose 'Add an application my organization is developing', and a recognizable name. Choose values for sign-in URL and App ID URL. The blog's URL is usually a good choice.
 4. When the app is created, under the CONFIGURE tab, generate a key and copy the secret value (it will be visible once only, after you save).
-5. Add a reply URL with the format: `https://<your blog url>/wp-login.php`. 
+5. Add a reply URL with the format: `https://<your blog url>/wp-login.php`.
 
 ### 3. Configure the plugin
 
@@ -43,14 +43,18 @@ The plugin can be configured in Settings > AAD Settings.
 
 The AADSSO plugin can be configured to set different WordPress roles based on the user's membership to a set of user-defined groups. This is a great way to control who has access to the blog, and under what role.
 
-The configuration is also done in Settings > AAD Settings
+**You will need to enable the permissions for your Azure Active Directory application**. In the 'CONFIGURE' tab, Under the 'permissions to other applications' heading, it needs to have Delegated Permission to "Read Directory Data" and "Enable sign-on and read users' profiles".
+
+Once your application permissions have been updated, you will need to update the plugin's configuration in Settings > AAD Settings:
 
 - Enable role mapping must be checked.
-- Each role contains a key-value map of Azure Active Directory group object IDs (the keys) and WordPress roles (values). Valid values for roles are `'administrator'`, `'editor'`, `'author'`, `'contributor'`, `'subscriber'`.
-- Custom WordPress roles to Activie Directory groups can be added in the Custom role mapping box by placing one mapping per line in the format: wp_role aad_group.
+- There are inputs for several common WordPress roles, Administrator, Editor, Author, Contributor, and Subscriber. The inputs expect the Azure Active Directory group object IDs. You can find the group object IDs under the Active Directory 'GROUPS' tab.
+	- You will see a listing of any custom groups that exist for that directory.
+	- Click on the one you want the ID for.
+	- Click on the 'PROPERTIES' tab.
+	- At the bottom, you'll see the value you need in the 'OBJECT ID' setting.
+- Custom WordPress roles to Activie Directory groups can be added in the Custom role mapping box by placing one mapping per line in the format: `<wp_role> <aad_group_id>`.
 
 ### Groups membership-based roles (no default role)
 
-Users are matched by their login names in WordPress, and WordPress roles are dictated by membership to a given Azure AD group. If the user is not a part of any of these groups, they are assigned the `default new user role in WordPress.
-
-
+Users are matched by the Azure AD login IDs in WordPress, and WordPress roles are dictated by membership to a given Azure AD group. If the user is not a part of any of these groups, they are assigned the default new user role in WordPress, or you can specify the default role in the plugin's configuration settings.
