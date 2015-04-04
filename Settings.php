@@ -52,6 +52,11 @@ class AADSSO_Settings {
 	public $org_domain_hint = '';
 
 	/**
+	 * @var string the tenant domain used to connect to the API.
+	 */
+	public $tenant_domain = '';
+
+	/**
 	 * @var boolean Whether or not to use AAD group memberships to set WordPress roles.
 	 */
 	public $enable_aad_group_to_wp_role = false;
@@ -286,6 +291,14 @@ class AADSSO_Settings {
 		);
 
 		add_settings_field(
+			'tenant_domain',
+			__( 'Organization Tenent Domain' ),
+			array( $this, 'render_org_tenant_domain' ),
+			'aad-settings',
+			'aad-directory-settings'
+		);
+
+		add_settings_field(
 			'client_id',
 			__( 'Client ID' ),
 			array( $this, 'render_client_id' ),
@@ -322,14 +335,6 @@ class AADSSO_Settings {
 			'group_map_enabled',
 			__( 'Enable role mapping' ),
 			array( $this, 'render_group_map_enabled' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
-
-		add_settings_field(
-			'default_wp_role',
-			__( 'Default role' ),
-			array( $this, 'render_default_wp_role' ),
 			'aad-settings',
 			'aad-group-settings'
 		);
@@ -375,6 +380,14 @@ class AADSSO_Settings {
 		);
 
 		add_settings_field(
+			'default_wp_role',
+			__( 'Default role' ),
+			array( $this, 'render_default_wp_role' ),
+			'aad-settings',
+			'aad-group-settings'
+		);
+
+		add_settings_field(
 			'custom_roles',
 			__( 'Custom role mapping' ),
 			array( $this, 'render_custom_roles' ),
@@ -393,6 +406,11 @@ class AADSSO_Settings {
 	public function render_org_domain_hint() {
 		echo '<input type="text" id="org_domain_hint" name="aad-settings[org_domain_hint]" value="' . $this->org_domain_hint . '" class="widefat" />';
 		echo '<br/><i>I.E.</i> microsoft.com <i>. Sent to AAD to prepopulate AD server.</i> Optional.';
+	}
+
+	public function render_org_tenant_domain() {
+		echo '<input type="text" id="tenant_domain" name="aad-settings[tenant_domain]" value="' . $this->tenant_domain . '" class="widefat" />';
+		echo '<br/><i>I.E.</i> microsoft.com <i>. Used for querying the API.</i> Optional.';
 	}
 
 	public function render_client_id() {
@@ -418,7 +436,7 @@ class AADSSO_Settings {
 	}
 
 	public function render_default_wp_role() {
-		echo '<select name="aad-settings[default_wp_role]" id="new_role">';
+		echo '<select style="min-width: 200px;" name="aad-settings[default_wp_role]" id="new_role">';
 		echo '<option value="">No Role</option>';
 		wp_dropdown_roles( $this->default_wp_role );
 		echo '</select>';
@@ -426,23 +444,23 @@ class AADSSO_Settings {
 	}
 
 	public function render_group_map_admin() {
-		echo '<input type="text" id="group_map_admin" name="aad-settings[group_map][administrator]" value="' . $this->settings['group_map']['administrator'] . '" class="widefat" />';
+		$this->group_dropdown_or_input( 'administrator' );
 	}
 
 	public function render_group_map_editor() {
-		echo '<input type="text" id="group_map_editor" name="aad-settings[group_map][editor]" value="' . $this->settings['group_map']['editor'] . '" class="widefat"  />';
+		$this->group_dropdown_or_input( 'editor' );
 	}
 
 	public function render_group_map_author() {
-		echo '<input type="text" id="group_map_author" name="aad-settings[group_map][author]" value="' . $this->settings['group_map']['author'] . '" class="widefat" />';
+		$this->group_dropdown_or_input( 'author' );
 	}
 
 	public function render_group_map_contributor() {
-		echo '<input type="text" id="group_map_contributor" name="aad-settings[group_map][contributor]" value="' . $this->settings['group_map']['contributor'] . '" class="widefat" />';
+		$this->group_dropdown_or_input( 'contributor' );
 	}
 
 	public function render_group_map_subscriber() {
-		echo '<input type="text" id="group_map_subscriber" name="aad-settings[group_map][subscriber]" value="' . $this->settings['group_map']['subscriber'] . '" class="widefat" />';
+		$this->group_dropdown_or_input( 'subscriber' );
 	}
 
 	public function render_custom_roles() {
@@ -451,4 +469,38 @@ class AADSSO_Settings {
 		echo '</textarea>';
 		echo '<br/><i>Additional custom roles that should be mapped in style "[wp_role] [aad_group]". One role per line.</i>';
 	}
+
+	public function group_dropdown_or_input( $key ) {
+		$groups = $this->get_groups();
+		if ( ! $groups || empty( $groups->value )) {
+			echo '<input type="text" id="group_map_'. $key .'" name="aad-settings[group_map]['. $key .']" value="' . $this->settings['group_map'][ $key ] . '" class="widefat" />';
+		} else {
+			echo '<select style="min-width: 200px;" id="group_map_'. $key .'" name="aad-settings[group_map]['. $key .']">';
+			echo '<option value="" ', selected( $this->settings['group_map'][ $key ] ), '>No Mapping</option>';
+			foreach ( $groups->value as $group ) {
+				printf( '<option value="%s" %s>%s</option>', $group->objectId, selected( $this->settings['group_map'][ $key ], $group->objectId, false ), $group->displayName );
+			}
+			echo '</select>';
+		}
+	}
+
+	public function get_groups() {
+		static $groups = null;
+
+		if ( ! $this->tenant_domain ) {
+			return;
+		}
+
+		if ( is_null( $groups ) ) {
+			AADSSO_GraphHelper::$tenant_id = $this->tenant_domain;
+			AADSSO_GraphHelper::$settings = (object) array(
+				'graphVersion' => $this->graphVersion,
+				'resourceURI'  => $this->resourceURI,
+			);
+			$groups = AADSSO_GraphHelper::getGroups();
+		}
+
+		return $groups;
+	}
+
 }
