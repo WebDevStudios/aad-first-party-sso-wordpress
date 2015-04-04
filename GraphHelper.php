@@ -47,9 +47,7 @@ class AADSSO_GraphHelper {
 	}
 
 	public static function getRequest( $url ) {
-		self::setup( $url );
-		$_SESSION['last_request'] = array('method' => 'GET', 'url' => $url);
-		return self::execute();
+		return self::request( 'GET', $url );
 	}
 
 	public static function patchRequest( $url, $data ) {
@@ -63,23 +61,32 @@ class AADSSO_GraphHelper {
 	}
 
 	public static function postRequest( $url, $data ) {
-		$payload = json_encode( $data );
+		return self::request( 'POST', $url, $data );
+	}
+
+	public static function request( $method, $url, $data = '' ) {
 
 		$args = array(
-			'body'    => $payload,
-			'headers' => self::AddRequiredHeadersAndSettings()
+			'headers' => self::AddRequiredHeadersAndSettings(),
+			'method' => $method,
 		);
+
+		$payload = '';
+
+		if ( $data ) {
+			$payload = json_encode( $data );
+			$args['body'] = $payload;
+		}
 
 		$response = wp_remote_post( $url, $args );
 
-
 		if ( is_wp_error( $response ) ) {
-			return new WP_Error( $response->get_error_code(), $response->get_error_message() );
+			return $response;
 		}
 
 		$output = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$_SESSION['last_request'] = array('method' => 'POST', 'url' => $url, 'payload' => $payload);
+		$_SESSION['last_request'] = array( 'method' => $method, 'url' => $url, 'payload' => $payload );
 		$_SESSION['last_request']['response'] = $output;
 
 		return $output;
