@@ -287,7 +287,7 @@ class AADSSO {
 	function getLoginUrl() {
 		$antiforgery_id = com_create_guid();
 		$_SESSION[ self::ANTIFORGERY_ID_KEY ] = $antiforgery_id;
-		$_SESSION['redirect_to'] = remove_query_arg( 'blarg' );
+		$_SESSION['redirect_to'] = isset( $_GET['redirect_to'] ) ? $_GET['redirect_to'] : remove_query_arg( 'blarg' );
 		return AADSSO_AuthorizationHelper::getAuthorizationURL( $this->settings, $antiforgery_id );
 	}
 
