@@ -294,7 +294,7 @@ class AADSSO {
 		$group_memberships = AADSSO_GraphHelper::userCheckMemberGroups( $aad_object_id, $group_ids );
 
 		// Determine which WordPress role the AAD group corresponds to.
-		// TODO: Check for error in the group membership response
+		// TODO: Check for error in the group membership response (and surface in wp-login.php)
 		$role_to_set = $this->settings->default_wp_role;
 		if ( ! empty( $group_memberships->value ) ) {
 			foreach ( $this->settings->aad_group_to_wp_role_map as $aad_group => $wp_role ) {
