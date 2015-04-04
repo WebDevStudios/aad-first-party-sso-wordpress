@@ -152,11 +152,18 @@ class AADSSO {
 			return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
 		}
 
-		// Try to find an existing user in WP where the UPN of the currect AAD user is
-		// (depending on config) the 'login' or 'email' field
-		$user = get_user_by( $this->settings->field_to_match_to_upn, $jwt->upn );
+		// Try to find an existing user in WP with the ObjectId of the currect AAD user
+		$users = get_users( array(
+			'meta_key'    => '_aad_sso_id',
+			'meta_value'  => $jwt->oid,
+			'number'      => 1,
+			'count_total' => false,
+		) );
+		// We should ONLY have one of these
+		$user = reset( $users );
 
-		if ( is_a( $user, 'WP_User' ) ) {
+		// If we have a user, log them in
+		if ( ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
 			// At this point, we have an authorization code, an access token and the user exists in WordPress.
 			// All that's left is to set the roles based on group membership.
 			if ( $this->settings->enable_aad_group_to_wp_role ) {
@@ -179,7 +186,7 @@ class AADSSO {
 		}
 
 		$username = explode( '@', $jwt->upn );
-		$username = $username[0];
+		$username = apply_filters( 'aad_sso_login_username', $username[0], $jwt );
 
 		// Setup the minimum required user data
 		$userdata = array(
@@ -196,6 +203,13 @@ class AADSSO {
 			: $userdata['first_name'];
 
 		$new_user_id = wp_insert_user( $userdata );
+
+		if ( is_wp_error( $new_user_id ) ) {
+			return $new_user_id;
+		}
+
+		// update usermeta so we know who the user is next time
+		update_user_meta( $new_user_id, '_aad_sso_id', $jwt->oid );
 
 		$user = new WP_User( $new_user_id );
 
