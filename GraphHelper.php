@@ -70,8 +70,14 @@ class AADSSO_GraphHelper {
 
 	public static function request( $method, $url, $data = '' ) {
 
+		$headers = self::AddRequiredHeadersAndSettings();
+
+		if ( is_wp_error( $headers ) ) {
+			return $headers;
+		}
+
 		$args = array(
-			'headers' => self::AddRequiredHeadersAndSettings(),
+			'headers' => $headers,
 			'method' => $method,
 		);
 
@@ -98,6 +104,11 @@ class AADSSO_GraphHelper {
 
 	// Add required headers like authorization header, service version etc.
 	public static function AddRequiredHeadersAndSettings() {
+
+		if ( ! isset( $_SESSION['token_type'], $_SESSION['access_token'] ) ) {
+			return new WP_Error( 'session_data_missing', 'ERROR: Session data missing (token_type, and/or access_token).' );
+		}
+
 		return array(
 			'Authorization' => $_SESSION['token_type'] . ' ' . $_SESSION['access_token'],
 			'Accept'        => 'application/json;odata=minimalmetadata',
