@@ -30,16 +30,6 @@ class AADSSO_Settings {
 	public $client_secret = '';
 
 	/**
-	 * @var string The URL to redirect to after signing in. Must also be configured in AAD.
-	 */
-	public $redirect_uri =         '';
-
-	/**
-	 * @var string The URL to redirect to after signing out (of AAD, not WP).
-	 */
-	public $logout_redirect_uri =   '';
-
-	/**
 	 * @var string The display name of the organization, used only in the link in the login page.
 	 */
 	public $org_display_name = '';

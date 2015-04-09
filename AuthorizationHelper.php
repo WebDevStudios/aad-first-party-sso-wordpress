@@ -16,7 +16,7 @@ class AADSSO_AuthorizationHelper
                             'domain_hint' => $settings->org_domain_hint,
                             'client_id' => $settings->client_id,
                             'resource' => $settings->resourceURI,
-                            'redirect_uri' => $settings->redirect_uri,
+                            'redirect_uri' => AADSSO::redirect_uri( 'request_authorization' ),
                             'state' => $antiforgery_id,
                             'nonce' => $antiforgery_id,
                         )
@@ -32,7 +32,7 @@ class AADSSO_AuthorizationHelper
                                         array(
                                             'grant_type' => 'authorization_code',
                                             'code' => $code,
-                                            'redirect_uri' => $settings->redirect_uri,
+                                            'redirect_uri' => AADSSO::redirect_uri( 'request_access_token' ),
                                             'resource' => $settings->resourceURI,
                                             'client_id' => $settings->client_id,
                                             'client_secret' => $settings->client_secret
@@ -50,7 +50,7 @@ class AADSSO_AuthorizationHelper
                                         array(
                                             'grant_type' => 'authorization_code',
                                             'code' => $code,
-                                            'redirect_uri' => $settings->redirect_uri,
+                                            'redirect_uri' => AADSSO::redirect_uri(  'request_access_token_as_native_app'  ),
                                             'resource' => $settings->resourceURI,
                                             'client_id' => $settings->client_id
                                         )

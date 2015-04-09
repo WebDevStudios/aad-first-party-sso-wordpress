@@ -28,17 +28,27 @@ require_once AADSSO_PLUGIN_DIR . '/lib/php-jwt/Exceptions/SignatureInvalidExcept
 
 class AADSSO {
 
-	static $instance = false;
+	/**
+	 * @var string The URL to redirect to after signing in.
+	 */
+	public static $redirect_uri = '';
 
+	/**
+	 * @var string The URL to redirect to after signing out (of AAD, not WP).
+	 */
+	public static $logout_redirect_uri = '';
+
+	static $instance = false;
 	private $settings = null;
+
 	const ANTIFORGERY_ID_KEY = 'antiforgery-id';
 
 	public function __construct() {
 		$this->settings = AADSSO_Settings::loadSettings();
 
 		// Set the redirect urls
-		$this->settings->redirect_uri = wp_login_url();
-		$this->settings->logout_redirect_uri = wp_login_url();
+		self::$redirect_uri = wp_login_url();
+		self::$logout_redirect_uri = wp_login_url();
 
 		// If plugin is not configured, we shouldn't proceed.
 		if ( ! $this->plugin_is_configured() ) {
@@ -332,7 +342,7 @@ class AADSSO {
 	}
 
 	function getLogoutUrl() {
-		return $this->settings->end_session_endpoint . '?' . http_build_query( array( 'post_logout_redirect_uri' => $this->settings->logout_redirect_uri ) );
+		return $this->settings->end_session_endpoint . '?' . http_build_query( array( 'post_logout_redirect_uri' => self::logout_redirect_uri( __FUNCTION__ ) ) );
 	}
 
 	/*** View ****/
@@ -367,6 +377,15 @@ EOF;
 		$html = sprintf( $html, $login_url, htmlentities( $org_display_name ), $logout_url );
 		return apply_filters( 'aad_sso_login_link', $html, $login_url, $logout_url, $org_display_name );
 	}
+
+	public static function redirect_uri( $context = '' ) {
+		return apply_filters( 'aad_sso_redirect_uri', self::$redirect_uri, $context );
+	}
+
+	public static function logout_redirect_uri( $context = '' ) {
+		return apply_filters( 'aad_sso_logout_redirect_uri', self::$logout_redirect_uri, $context );
+	}
+
 } // end class
 
 $aadsso = AADSSO::getInstance();
