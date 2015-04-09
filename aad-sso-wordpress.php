@@ -46,7 +46,7 @@ class AADSSO {
 		}
 
 		// Add the hook that starts the SESSION
-		add_action( 'init', array($this, 'register_session') );
+		add_action( 'init', array( $this, 'register_session' ) );
 
 		// The authenticate filter
 		add_filter( 'authenticate', array( $this, 'authenticate' ), 1, 3 );
@@ -135,8 +135,8 @@ class AADSSO {
 	}
 
 	function register_session() {
-		if ( ! session_id() ) {
-			session_start();
+		if ( ( function_exists( 'session_status' ) && PHP_SESSION_ACTIVE !== session_status() ) {
+		  session_start();
 		}
 	}
 
