@@ -335,7 +335,7 @@ class AADSSO {
 	}
 
 	function getLoginUrl() {
-		$antiforgery_id = com_create_guid();
+		$antiforgery_id = wp_create_nonce( AADSSO::ANTIFORGERY_ID_KEY );
 		$_SESSION[ self::ANTIFORGERY_ID_KEY ] = $antiforgery_id;
 		$_SESSION['redirect_to'] = isset( $_GET['redirect_to'] ) ? $_GET['redirect_to'] : remove_query_arg( 'blarg' );
 		return AADSSO_AuthorizationHelper::getAuthorizationURL( $this->settings, $antiforgery_id );
@@ -389,21 +389,3 @@ EOF;
 } // end class
 
 $aadsso = AADSSO::getInstance();
-
-
-if ( ! function_exists( 'com_create_guid' ) ) {
-	function com_create_guid(){
-		mt_srand( (double) microtime() * 10000 ); //optional for php 4.2.0 and up.
-		$charid = strtoupper( md5( uniqid( rand(), true ) ) );
-		$hyphen = chr( 45 ); // "-"
-		$uuid = chr( 123 ) . // "{"
-			substr( $charid, 0, 8 ) . $hyphen .
-			substr( $charid, 8, 4 ) . $hyphen .
-			substr( $charid, 12, 4 ) . $hyphen .
-			substr( $charid, 16, 4 ) . $hyphen .
-			substr( $charid, 20, 12 ) .
-			chr( 125 ); // "}"
-
-		return $uuid;
-	}
-}
