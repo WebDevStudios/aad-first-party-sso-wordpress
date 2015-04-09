@@ -135,7 +135,7 @@ class AADSSO {
 	}
 
 	function register_session() {
-		if ( ( function_exists( 'session_status' ) && PHP_SESSION_ACTIVE !== session_status() ) {
+		if ( ( function_exists( 'session_status' ) && PHP_SESSION_ACTIVE !== session_status() ) || ! session_id() ) {
 		  session_start();
 		}
 	}
