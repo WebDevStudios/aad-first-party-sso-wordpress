@@ -109,9 +109,9 @@ class AADSSO_Settings {
 	 **/
 	public $override_user_registration = false;
 
-	public function __construct() {
+	protected function __construct() {
 
-		if( is_admin() ) {
+		if ( is_admin() ) {
 			// Setup stuff only needed in wp-admin
 			add_action( 'admin_menu', array( $this, 'add_menus' ) );
 			add_action( 'admin_init', array( $this, 'register_settings' ) );
@@ -122,7 +122,7 @@ class AADSSO_Settings {
 	 * @return self The (only) instance of the class.
 	 */
 	public static function getInstance() {
-		if (!self::$instance) {
+		if ( ! self::$instance ) {
 			self::$instance = new self;
 		}
 		return self::$instance;

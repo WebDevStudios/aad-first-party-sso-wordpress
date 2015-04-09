@@ -66,17 +66,17 @@ class AADSSO_AuthorizationHelper
 			'body' => $authenticationRequestBody
 		) );
 
-		if( is_wp_error( $response ) ) {
-			return new WP_Error( $response->get_error_code(), $response->get_error_message() );
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		$output = wp_remote_retrieve_body( $response );
 
         // Decode the JSON response from the STS. If all went well, this will contain the access token and the
         // id_token (a JWT token telling us about the current user)s
-        $token = json_decode($output);
+        $token = json_decode( $output );
 
-        if ( isset($token->access_token) ) {
+        if ( isset( $token->access_token ) ) {
 
             // Add the token information to the session so that we can use it later
             // TODO: these probably shouldn't be in SESSION...
