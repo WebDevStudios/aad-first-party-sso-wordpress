@@ -116,6 +116,8 @@ class AADSSO {
 	public function redirect_after_login( $redirect_to, $requested_redirect_to, $user ) {
 		if ( is_a( $user, 'WP_User' ) && isset( $_SESSION['redirect_to'] ) ) {
 			$redirect_to = $_SESSION['redirect_to'];
+			// Remove chances of residual redirects when logging in.
+			unset( $_SESSION['redirect_to'] );
 		}
 
 		return $redirect_to;
