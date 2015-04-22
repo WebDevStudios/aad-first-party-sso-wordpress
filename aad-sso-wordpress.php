@@ -115,7 +115,7 @@ class AADSSO {
 
 	public function redirect_after_login( $redirect_to, $requested_redirect_to, $user ) {
 		if ( is_a( $user, 'WP_User' ) && isset( $_SESSION['redirect_to'] ) ) {
-			$redirect_to = $_SESSION['redirect_to'];
+			$redirect_to = esc_url_raw( $_SESSION['redirect_to'] );
 			// Remove chances of residual redirects when logging in.
 			unset( $_SESSION['redirect_to'] );
 		}
@@ -339,7 +339,7 @@ class AADSSO {
 	function getLoginUrl() {
 		$antiforgery_id = wp_create_nonce( AADSSO::ANTIFORGERY_ID_KEY );
 		$_SESSION[ self::ANTIFORGERY_ID_KEY ] = $antiforgery_id;
-		$_SESSION['redirect_to'] = isset( $_GET['redirect_to'] ) ? $_GET['redirect_to'] : remove_query_arg( 'blarg' );
+		$_SESSION['redirect_to'] = esc_url( isset( $_GET['redirect_to'] ) ? $_GET['redirect_to'] : remove_query_arg( 'blarg' ) );
 		return AADSSO_AuthorizationHelper::getAuthorizationURL( $this->settings, $antiforgery_id );
 	}
 
