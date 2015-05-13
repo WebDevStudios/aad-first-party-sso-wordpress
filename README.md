@@ -1,5 +1,9 @@
 # Azure Active Directory First-Party Single Sign-on for WordPress
 
+###**Please Note: This plugin is built with a very specific use-case in mind. This plugin will only work for First Party AAD logins from Microsoft. If you'd like to set this up on your site, you'll need to request and be granted access.**
+
+---
+
 A WordPress plugin that allows organizations to use their Azure Active Directory
 user accounts to sign in to WordPress. Organizations with Office 365 already have
 Azure Active Directory and can use this plugin for all of their users and any onsite
