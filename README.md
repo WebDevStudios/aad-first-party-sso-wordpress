@@ -1,4 +1,4 @@
-# Azure Active Directory Single Sign-on for WordPress
+# Azure Active Directory First-Party Single Sign-on for WordPress
 
 A WordPress plugin that allows organizations to use their Azure Active Directory
 user accounts to sign in to WordPress. Organizations with Office 365 already have

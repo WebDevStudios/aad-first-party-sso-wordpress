@@ -1,7 +1,7 @@
 <?php
 
 /*
-Plugin Name: Azure Active Directory Single Sign-on for WordPress
+Plugin Name: Azure Active Directory First-Party Single Sign-on for WordPress
 Plugin URI: http://github.com/psignoret/aad-sso-wordpress
 Description: Allows you to use your organization's Azure Active Directory user accounts to log in to WordPress. If your organization is using Office 365, your user accounts are already in Azure Active Directory. This plugin uses OAuth 2.0 to authenticate users, and the Azure Active Directory Graph to get group membership and other details.
 Author: Philippe Signoret
@@ -18,7 +18,6 @@ define( 'AADSSO_SETTINGS_PATH', AADSSO_PLUGIN_DIR . 'Settings.json' );
 
 require_once AADSSO_PLUGIN_DIR . 'Settings.php';
 require_once AADSSO_PLUGIN_DIR . 'AuthorizationHelper.php';
-require_once AADSSO_PLUGIN_DIR . 'GraphHelper.php';
 
 // TODO: Auto-load the (the exceptions at least)
 require_once AADSSO_PLUGIN_DIR . 'lib/php-jwt/Authentication/JWT.php';
@@ -38,13 +37,15 @@ class AADSSO {
 	 */
 	public static $logout_redirect_uri = '';
 
+	public static $redirect_after_login_query_arg = 'aad_sso_return_to_page_post_login';
+
 	static $instance = false;
 	private $settings = null;
 
-	const ANTIFORGERY_ID_KEY = 'antiforgery-id';
+	const NONCE_NAME = 'aad-sso-nonce';
 
 	public function __construct() {
-		$this->settings = AADSSO_Settings::loadSettings();
+		$this->settings = AADSSO_Settings::load_settings();
 
 		// Set the redirect urls
 		self::$redirect_uri = wp_login_url();
@@ -55,29 +56,19 @@ class AADSSO {
 			return;
 		}
 
-		// Add the hook that starts the SESSION
-		add_action( 'init', array( $this, 'register_session' ) );
-
 		// The authenticate filter
 		add_filter( 'authenticate', array( $this, 'authenticate' ), 1, 3 );
 
 		// Some debugging locations
-		//add_action( 'admin_notices', array( $this, 'printDebug' ) );
-		//add_action( 'login_footer', array( $this, 'printDebug' ) );
 
 		// Add the <style> element to the login page
 		add_action( 'login_enqueue_scripts', array( $this, 'printLoginCss' ) );
 
 		// Add the link to the organization's sign-in page
 		add_action( 'login_form', array( $this, 'printLoginLink' ) );
-
-		// Clear session variables when logging out
-		add_action( 'wp_logout', array( $this, 'clearSession' ) );
+		add_action( 'wp_head', array( $this, 'printLoginLink' ) );
 
 		add_action( 'login_init', array( $this, 'maybeBypassLogin' ) );
-
-		// Redirect user back to original location
-		add_filter( 'login_redirect', array( $this, 'redirect_after_login' ), 20, 3 );
 	}
 
 	/**
@@ -86,10 +77,10 @@ class AADSSO {
 	 * @return bool Whether plugin is configured
 	 */
 	public function plugin_is_configured() {
-		return isset( $this->settings->client_id, $this->settings->client_secret ) && $this->settings->client_id && $this->settings->client_secret;
+		return isset( $this->settings->client_id, $this->settings->base_uri ) && $this->settings->client_id && $this->settings->base_uri;
 	}
 
-	public static function getInstance() {
+	public static function get_instance() {
 		if ( ! self::$instance ) {
 			self::$instance = new self();
 		}
@@ -111,16 +102,6 @@ class AADSSO {
 			wp_redirect( $this->getLoginUrl() );
 			die();
 		}
-	}
-
-	public function redirect_after_login( $redirect_to, $requested_redirect_to, $user ) {
-		if ( is_a( $user, 'WP_User' ) && isset( $_SESSION['redirect_to'] ) ) {
-			$redirect_to = esc_url_raw( $_SESSION['redirect_to'] );
-			// Remove chances of residual redirects when logging in.
-			unset( $_SESSION['redirect_to'] );
-		}
-
-		return $redirect_to;
 	}
 
 	/**
@@ -146,19 +127,13 @@ class AADSSO {
 		return $wants_to_login;
 	}
 
-	function register_session() {
-		if ( ( function_exists( 'session_status' ) && PHP_SESSION_ACTIVE !== session_status() ) || ! session_id() ) {
-		  session_start();
-		}
-	}
-
 	function authenticate( $user, $username, $password ) {
+
 		// Don't re-authenticate if already authenticated
 		if ( is_a( $user, 'WP_User' ) ) {
 			return $user;
 		}
-
-		if ( ! isset( $_GET['code'] ) ) {
+		if ( ! isset( $_GET['id_token'] ) ) {
 
 			if ( isset( $_GET['error'] ) ) {
 				// The attempt to get an authorization code failed (i.e., the reply from the STS was "No.")
@@ -168,36 +143,43 @@ class AADSSO {
 			return $user;
 		}
 
-		if ( ! isset( $_GET['state'] ) || $_GET['state'] != $_SESSION[ self::ANTIFORGERY_ID_KEY ] ) {
-			return new WP_Error( 'antiforgery_id_mismatch', sprintf( 'ANTIFORGERY_ID_KEY mismatch. Expecting %s', $_SESSION[ self::ANTIFORGERY_ID_KEY ] ) );
-		}
-
-		// Looks like we got an authorization code, let's try to get an access token
-		$token = AADSSO_AuthorizationHelper::getAccessToken( $_GET['code'], $this->settings );
-
-		if ( ! isset( $token->access_token ) ) {
-
-			if ( isset( $token->error ) ) {
-				// Unable to get an access token (although we did get an authorization code)
-				return new WP_Error( $token->error, sprintf( 'ERROR: Could not get an access token to Azure Active Directory. %s', $token->error_description ) );
-			}
-
-			// None of the above, I have no idea what happened.
-			return new WP_Error( 'unknown', 'ERROR: An unknown error occured.' );
-		}
-
-		// Happy path
-
 		try {
-			$jwt = AADSSO_AuthorizationHelper::validateIdToken( $token->id_token, $this->settings, $_SESSION[ self::ANTIFORGERY_ID_KEY ] );
+			AADSSO_AuthorizationHelper::$base_uri = $this->settings->base_uri;
+			$jwt = AADSSO_AuthorizationHelper::validate_id_token( $_GET['id_token'] );
 		} catch ( Exception $e ) {
 			return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
 		}
 
+
+
+		if ( ! wp_verify_nonce( $jwt->nonce, self::NONCE_NAME ) ) {
+			return new WP_Error( 'nonce_fail', sprintf( 'NONCE_NAME mismatch. Expecting %s', self::NONCE_NAME ) );
+		}
+
+		if ( $jwt->aud != $this->settings->client_id ) {
+			//	Need to check [aud] is the same as the client id
+			return new WP_Error( 'client_id_mismatch', sprintf( 'ERROR: aud ( %s ) does not match Client ID', $jwt->aud ) );
+		}
+
+		if ( ( strpos( $jwt->iss, 'sts.windows.net' ) == false )  && ( strpos( $jwt->iss, 'sts.windows-ppe.net' ) == false ) )  {
+			//	[iss] contains sts.windows.net or sts.windows-ppe.net
+			return new WP_Error( 'issuer_mismatch', sprintf( 'ERROR: Issuer was %s, expected windows.net', $jwt->iss ) );
+		}
+
+		if ( (int) $jwt->iat > (int) time() ) {
+			//	[iat] must not be in the future
+			return new WP_Error( 'issuing_time_error', sprintf( 'ERROR: Account must be issued in the past, was issued at %s.', $jwt->iat ) );
+		}
+
+		if ( (int) $jwt->exp <= (int) time() ) {
+			//	[exp] must not be in the past
+			return new WP_Error( 'issuing_is_expired', sprintf( 'ERROR: Account has expired on %s', $jwt->exp ) );
+		}
+
 		// Try to find an existing user in WP with the ObjectId of the currect AAD user
 		$users = get_users( array(
-			'meta_key'    => '_aad_sso_id',
-			'meta_value'  => $jwt->oid,
+			'meta_key'    => '_aad_sso_altsecid',
+			'meta_value'  => $jwt->altsecid,
 			'number'      => 1,
 			'count_total' => false,
 		) );
@@ -207,10 +189,19 @@ class AADSSO {
 		// If we have a user, log them in
 		if ( ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
 			// At this point, we have an authorization code, an access token and the user exists in WordPress.
-			// All that's left is to set the roles based on group membership.
-			if ( $this->settings->enable_aad_group_to_wp_role ) {
-				$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
-			}
+			$user = apply_filters( 'aad_sso_found_user', $user, $jwt );
+
+			return $user;
+		}
+
+		$user = get_user_by( 'email', $jwt->email );
+
+		// If we have a user, log them in
+		if ( $user && ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
+			// At this point, we have an authorization code, an access token and the user exists in WordPress,
+			// but the user didn't have the _aad_sso_altsecid set. We'll set it and continue.
+			update_user_meta( $user->data->ID, '_aad_sso_altsecid', $jwt->altsecid );
+			$user = apply_filters( 'aad_sso_found_user', $user, $jwt );
 
 			return $user;
 		}
@@ -223,21 +214,25 @@ class AADSSO {
 		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration );
 
 		if ( ! $reg_open && ! $override_reg ) {
-			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->upn ) );
+			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->email ) );
 		}
 
-		$username = explode( '@', $jwt->upn );
+		if ( empty( $jwt->email ) ) {
+			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: no email present for user %s.', $jwt->altsecid ) );
+		}
+
+		$username = explode( '@', $jwt->email );
 		$username = apply_filters( 'aad_sso_login_username', $username[0], $jwt );
 
 		$username = get_user_by( 'login', $username )
-			? 'aadsso-'. sanitize_text_field( $jwt->oid )
+			? 'aadsso-'. sanitize_text_field( $jwt->altsecid )
 			: $username;
 
 		// Setup the minimum required user data
 		$userdata = array(
 			'user_login'   => wp_slash( $username ),
-			'user_email'   => wp_slash( $this->determine_email( $jwt ) ),
-			'user_pass'    => wp_generate_password( 12, true ),
+			'user_email'   => wp_slash( $jwt->email ),
+			'user_pass'    => wp_generate_password( 20, true ),
 			'first_name'   => isset( $jwt->given_name ) ? esc_html( $jwt->given_name ) : '',
 			'last_name'    => isset( $jwt->family_name ) ? esc_html( $jwt->family_name ) : '',
 			'role'         => 'subscriber',
@@ -254,108 +249,27 @@ class AADSSO {
 		}
 
 		// update usermeta so we know who the user is next time
-		update_user_meta( $new_user_id, '_aad_sso_id', $jwt->oid );
-
+		update_user_meta( $new_user_id, '_aad_sso_altsecid', $jwt->altsecid );
 		$user = new WP_User( $new_user_id );
 
-		if ( $this->settings->enable_aad_group_to_wp_role ) {
-			$this->updateUserRoles( $user, $jwt->oid, $jwt->tid );
-		}
+		// @todo do_action new_user
+		$user = apply_filters( 'aad_sso_new_user', $user, $jwt );
 
 		return $user;
 	}
 
-	public function determine_email( $jwt ) {
-		AADSSO_GraphHelper::$settings = $this->settings;
-		AADSSO_GraphHelper::$tenant_id = $jwt->tid;
-
-		$ad_user_data = AADSSO_GraphHelper::getMe();
-
-		if ( is_wp_error( $ad_user_data ) ) {
-			return $jwt->upn;
-		}
-
-		// Override the priority of the keys which get checked
-		$keys_in_order          = apply_filters( 'aad_sso_emails_from_graph_check_order', array( 'proxyAddresses', 'mail', 'otherMails', 'userPrincipalName' ) );
-		$keys_with_array_values = apply_filters( 'aad_sso_emails_keys_with_array_values', array( 'proxyAddresses', 'otherMails' ) );
-
-		foreach ( $keys_in_order as $key ) {
-
-			if ( ! isset( $ad_user_data->{$key} ) || empty( $ad_user_data->{$key} ) ) {
-				continue;
-			}
-
-			if (
-				in_array( $key, $keys_with_array_values )
-				&& is_array( $ad_user_data->{$key} )
-			) {
-				return reset( $ad_user_data->{$key} );
-			}
-
-			if ( ! is_array( $ad_user_data->{$key} ) ) {
-				return $ad_user_data->{$key};
-			}
-		}
-
-		return $jwt->upn;
-	}
-
-	// Users AAD group memberships to set WordPress role
-	function updateUserRoles( $user, $aad_object_id, $aad_tenant_id ) {
-		// Pass the settings to GraphHelper
-		AADSSO_GraphHelper::$settings = $this->settings;
-		AADSSO_GraphHelper::$tenant_id = $aad_tenant_id;
-
-		// Of the AAD groups defined in the settings, get only those where the user is a member
-		$group_ids = array_keys( $this->settings->aad_group_to_wp_role_map );
-		$group_memberships = AADSSO_GraphHelper::userCheckMemberGroups( $aad_object_id, $group_ids );
-
-		// Determine which WordPress role the AAD group corresponds to.
-		// TODO: Check for error in the group membership response (and surface in wp-login.php)
-		$role_to_set = $this->settings->default_wp_role;
-		if ( ! empty( $group_memberships->value ) ) {
-			foreach ( $this->settings->aad_group_to_wp_role_map as $aad_group => $wp_role ) {
-				if ( in_array( $aad_group, $group_memberships->value ) ) {
-					$role_to_set = $wp_role;
-					break;
-				}
-			}
-		}
-
-		if ( null != $role_to_set ) {
-			// Set the role on the WordPress user
-			$user->set_role( $role_to_set );
-		} else {
-			$token = AADSSO_AuthorizationHelper::getAccessToken( $_GET['code'], $this->settings );
-			$jwt = AADSSO_AuthorizationHelper::validateIdToken( $token->id_token, $this->settings, $_SESSION[ self::ANTIFORGERY_ID_KEY ] );
-			$user = new WP_Error( 'user_not_member_of_required_group', sprintf( 'ERROR: The authenticated user %s is not a member of any group granting a role.', $jwt->upn ) );
-		}
-	}
-
-	function clearSession() {
-		session_destroy();
-	}
-
 	function getLoginUrl() {
-		$antiforgery_id = wp_create_nonce( AADSSO::ANTIFORGERY_ID_KEY );
-		$_SESSION[ self::ANTIFORGERY_ID_KEY ] = $antiforgery_id;
-		$_SESSION['redirect_to'] = esc_url( isset( $_GET['redirect_to'] ) ? $_GET['redirect_to'] : remove_query_arg( 'blarg' ) );
-		return AADSSO_AuthorizationHelper::getAuthorizationURL( $this->settings, $antiforgery_id );
+		$redirect_uri = apply_filters( 'aad_sson_login_redirect_uri', self::redirect_uri( __FUNCTION__ ) );
+		$nonce = wp_create_nonce( self::NONCE_NAME );
+		return $this->settings->base_uri .'oauth2/authorize?client_id='. $this->settings->client_id .'&response_mode=query&response_type=code+id_token&redirect_uri='. $redirect_uri .'&nonce='. $nonce;
 	}
 
 	function getLogoutUrl() {
-		return $this->settings->end_session_endpoint . '?' . http_build_query( array( 'post_logout_redirect_uri' => self::logout_redirect_uri( __FUNCTION__ ) ) );
+		$logout_uri = self::logout_redirect_uri( __FUNCTION__ );
+		return 'https://login.windows.net/common/oauth2/oauth2/logout?post_logout_redirect_uri='. $logout_uri;
 	}
 
 	/*** View ****/
-
-	function printDebug() {
-		if ( isset( $_SESSION['aadsso_debug'] ) ) {
-			echo '<pre>'. print_r( $_SESSION['aadsso_var'], true ) . '</pre>';
-		}
-		echo '<p>DEBUG</p><pre>' . print_r( $_SESSION, true ) . '</pre>';
-		echo '<pre>' . print_r( $_GET, true ) . '</pre>';
-	}
 
 	function printLoginCss() {
 		wp_enqueue_style( 'aad-sso-wordpress', AADSSO_PLUGIN_URL . '/login.css' );
@@ -390,4 +304,4 @@ EOF;
 
 } // end class
 
-$aadsso = AADSSO::getInstance();
+$aadsso = AADSSO::get_instance();

@@ -4,14 +4,14 @@
  * Class containing all settings used by the AADSSO plugin.
  *
  * Installation-specific configuration settings should be kept in a JSON file and loaded with the
- * loadSettingsFromJSON() method rather than hard-coding here.
+ * load_settingsFromJSON() method rather than hard-coding here.
  */
 class AADSSO_Settings {
 
 	/**
 	 * @var \AADSSO_Settings $instance The settings instance.
 	 */
-	private static $instance = NULL;
+	private static $instance = null;
 
 	/**
 	 * @var string The OAuth 2.0 client type. Either 'confidential' or 'public'. (Not in use yet.)
@@ -24,10 +24,35 @@ class AADSSO_Settings {
 	public $client_id = '';
 
 	/**
+	 * @var @TODO
+	 */
+	public $from_uri = '';
+
+	/**
+	 * @var @TODO
+	 */
+	public $to_uri = '';
+
+	/**
+	 * @var @TODO
+	 */
+	public $base_uri = 'https://login.windows-ppe.net/common/';
+
+	/**
+	 * @var @TODO
+	 */
+	public $keys_endpoint = 'discovery/keys';
+
+	/**
 	 * @var string The client secret key, which is generated on the app configuration page in AAD.
 	 * Required if $clientType is 'public'.
 	 */
 	public $client_secret = '';
+
+	/**
+	 * @var string The URL to redirect to after signing out (of AAD, not WP).
+	 */
+	public $logout_redirect_uri = '';
 
 	/**
 	 * @var string The display name of the organization, used only in the link in the login page.
@@ -39,12 +64,7 @@ class AADSSO_Settings {
 	 * The value of the domain_hint is a registered domain for the tenant. If the tenant is federated
 	 * to an on-premises directory, AAD redirects to the specified tenant federation server.
 	 */
-	public $org_domain_hint = '';
-
-	/**
-	 * @var string the tenant domain used to connect to the API.
-	 */
-	public $tenant_domain = '';
+	public $org_domain_hint = 'microsoft.com';
 
 	/**
 	 * @var boolean Whether or not to use AAD group memberships to set WordPress roles.
@@ -62,10 +82,10 @@ class AADSSO_Settings {
 
 	/**
 	 * @var string The default WordPress role to assign a user when not a member of defined AAD groups.
-	 * This is only used if $enable_aad_group_to_wp_role is TRUE. NULL means that access will be denied
+	 * This is only used if $enable_aad_group_to_wp_role is TRUE. null means that access will be denied
 	 * to users who are not members of the groups defined in $aad_group_to_wp_role_map.
 	 */
-	public $default_wp_role = NULL;
+	public $default_wp_role = null;
 
 	/**
 	 * @var string The OpenID Connect configuration discovery endpoint.
@@ -109,7 +129,7 @@ class AADSSO_Settings {
 	 **/
 	public $override_user_registration = false;
 
-	protected function __construct() {
+	public function __construct() {
 
 		if ( is_admin() ) {
 			// Setup stuff only needed in wp-admin
@@ -121,7 +141,7 @@ class AADSSO_Settings {
 	/**
 	 * @return self The (only) instance of the class.
 	 */
-	public static function getInstance() {
+	public static function get_instance() {
 		if ( ! self::$instance ) {
 			self::$instance = new self;
 		}
@@ -136,8 +156,8 @@ class AADSSO_Settings {
 	*
 	* @return self Returns the (only) instance of the class.
 	*/
-	public static function loadSettings() {
-		$settings = self::getInstance();
+	public static function load_settings() {
+		$settings = self::get_instance();
 
 		// Import from Settings.json
 		$settings->importSettingsFromDB();
@@ -177,41 +197,46 @@ class AADSSO_Settings {
 			'org_domain_hint'      => $this->org_domain_hint,
 			'client_id'            => $this->client_id,
 			'client_secret'        => $this->client_secret,
-			'enable_group_to_role' => $this->aad_group_to_wp_role_map,
-			'custom_roles'         => '',
-			'group_map'            => array(),
+			// 'enable_group_to_role' => $this->aad_group_to_wp_role_map,
+			// 'custom_roles'         => '',
+			// 'group_map'            => array(),
+			'from_uri'             => $this->from_uri,
+			'to_uri'               => $this->to_uri,
+			'base_uri'             => $this->base_uri,
 		);
 
 		$settings = get_option( 'aad-settings', array() );
 		$settings = wp_parse_args( (array) $settings, $defaults );
 
-		$group_map = array();
+		// @todo this is broken for now, because we can't access the graph API
+		// @link https://github.com/WebDevStudios/aad-sso-wordpress/blob/master/GraphHelper.php#L108-L110
+		// $group_map = array();
 		// If custom roles exist
-		if ( ( isset( $settings['custom_roles'] ) && $settings['custom_roles'] && is_string( $settings['custom_roles'] ) ) ) {
+		// if ( ( isset( $settings['custom_roles'] ) && $settings['custom_roles'] && is_string( $settings['custom_roles'] ) ) ) {
 
-			// Get rows
-			$custom_roles = explode( "\n", trim( $settings['custom_roles'] ) );
-			// Let's add them to our group map
-			foreach( (array) $custom_roles as $role ) {
-				if ( $role ) {
-					// get role/aad-role
-					$role = explode( ' ', trim( $role ) );
-					if ( isset( $role[0], $role[1] ) ) {
-						// Add to our role map
-						$group_map[ $role[0] ] = $role[1];
-					}
-				}
-			}
-		}
+		// 	// Get rows
+		// 	$custom_roles = explode( "\n", trim( $settings['custom_roles'] ) );
+		// 	// Let's add them to our group map
+		// 	foreach( (array) $custom_roles as $role ) {
+		// 		if ( $role ) {
+		// 			// get role/aad-role
+		// 			$role = explode( ' ', trim( $role ) );
+		// 			if ( isset( $role[0], $role[1] ) ) {
+		// 				// Add to our role map
+		// 				$group_map[ $role[0] ] = $role[1];
+		// 			}
+		// 		}
+		// 	}
+		// }
 
-		// Ensure we have all the group mapping parts
-		$settings['group_map'] = wp_parse_args( array_unique( array_merge( $settings['group_map'], $group_map ) ), array(
-			'administrator' => '',
-			'editor'        => '',
-			'author'        => '',
-			'contributor'   => '',
-			'subscriber'    => '',
-		) );
+		// // Ensure we have all the group mapping parts
+		// $settings['group_map'] = wp_parse_args( array_unique( array_merge( $settings['group_map'], $group_map ) ), array(
+		// 	'administrator' => '',
+		// 	'editor'        => '',
+		// 	'author'        => '',
+		// 	'contributor'   => '',
+		// 	'subscriber'    => '',
+		// ) );
 
 		// Store the whole chunk of settings
 		$this->settings = $settings;
@@ -221,22 +246,26 @@ class AADSSO_Settings {
 			$this->$k = $v;
 		}
 
+		// @todo this is broken for now, because we can't access the graph API
+		// @link https://github.com/WebDevStudios/aad-sso-wordpress/blob/master/GraphHelper.php#L108-L110
+
 		// Create group to role map
 		// Note: Legacy hack
-		foreach( $settings['group_map'] as $k => $v ) {
-			$this->aad_group_to_wp_role_map[ $v ] = $k;
-		}
+		// foreach( $settings['group_map'] as $k => $v ) {
+		// 	$this->aad_group_to_wp_role_map[ $v ] = $k;
+		// }
 
-		// Hack to preserve original functionality
-		if( !empty( $settings['group_map_enabled'] ) ) {
-			$this->enable_aad_group_to_wp_role = true;
-		}
-		if( false == get_option( 'aad-group-map-set' ) ){
-			update_option( 'aad-group-map-set', 1 );
-			$this->enable_aad_group_to_wp_role = true;
-		}
+		// // Hack to preserve original functionality
+		// if( !empty( $settings['group_map_enabled'] ) ) {
+		// 	$this->enable_aad_group_to_wp_role = true;
+		// }
+		// if( false == get_option( 'aad-group-map-set' ) ){
+		// 	update_option( 'aad-group-map-set', 1 );
+		// 	$this->enable_aad_group_to_wp_role = true;
+		// }
 
-		$this->default_wp_role = isset( $settings['default_wp_role'] ) ? $settings['default_wp_role'] : $this->default_wp_role;
+		// $this->default_wp_role = isset( $settings['default_wp_role'] ) ? $settings['default_wp_role'] : $this->default_wp_role;
+
 	}
 
 	public function add_menus() {
@@ -281,14 +310,6 @@ class AADSSO_Settings {
 		);
 
 		add_settings_field(
-			'tenant_domain',
-			__( 'Organization Tenent Domain' ),
-			array( $this, 'render_org_tenant_domain' ),
-			'aad-settings',
-			'aad-directory-settings'
-		);
-
-		add_settings_field(
 			'client_id',
 			__( 'Client ID' ),
 			array( $this, 'render_client_id' ),
@@ -297,9 +318,25 @@ class AADSSO_Settings {
 		);
 
 		add_settings_field(
-			'client_secret',
-			__( 'Client Secret' ),
-			array( $this, 'render_client_secret' ),
+			'base_uri',
+			__( 'Base URI' ),
+			array( $this, 'render_base_uri' ),
+			'aad-settings',
+			'aad-directory-settings'
+		);
+
+		add_settings_field(
+			'from_uri',
+			__( 'From URI' ),
+			array( $this, 'render_from_uri' ),
+			'aad-settings',
+			'aad-directory-settings'
+		);
+
+		add_settings_field(
+			'to_uri',
+			__( 'To URI' ),
+			array( $this, 'render_to_uri' ),
 			'aad-settings',
 			'aad-directory-settings'
 		);
@@ -311,79 +348,85 @@ class AADSSO_Settings {
 			'aad-settings',
 			'aad-directory-settings'
 		);
+
+		/*
+		 * @todo this is broken for now, because we can't access the graph API
+		 * @link https://github.com/WebDevStudios/aad-sso-wordpress/blob/master/GraphHelper.php#L108-L110
+		 */
+
 		/*
 		 * Map of group hash from Azure to local groups
 		 */
-		add_settings_section(
-			'aad-group-settings',
-			__( 'Group Map' ),
-			array( $this, 'render_group_settings_section' ),
-			'aad-settings'
-		);
+		// add_settings_section(
+		// 	'aad-group-settings',
+		// 	__( 'Group Map' ),
+		// 	array( $this, 'render_group_settings_section' ),
+		// 	'aad-settings'
+		// );
 
-		add_settings_field(
-			'group_map_enabled',
-			__( 'Enable role mapping' ),
-			array( $this, 'render_group_map_enabled' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'group_map_enabled',
+		// 	__( 'Enable role mapping' ),
+		// 	array( $this, 'render_group_map_enabled' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'group_map_admin',
-			__( 'Administrator' ),
-			array( $this, 'render_group_map_admin' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'group_map_admin',
+		// 	__( 'Administrator' ),
+		// 	array( $this, 'render_group_map_admin' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'group_map_editor',
-			__( 'Editor' ),
-			array( $this, 'render_group_map_editor' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'group_map_editor',
+		// 	__( 'Editor' ),
+		// 	array( $this, 'render_group_map_editor' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'group_map_author',
-			__( 'Author' ),
-			array( $this, 'render_group_map_author' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'group_map_author',
+		// 	__( 'Author' ),
+		// 	array( $this, 'render_group_map_author' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'group_map_contributor',
-			__( 'Contributor' ),
-			array( $this, 'render_group_map_contributor' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'group_map_contributor',
+		// 	__( 'Contributor' ),
+		// 	array( $this, 'render_group_map_contributor' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'group_map_subscriber',
-			__( 'Subscriber' ),
-			array( $this, 'render_group_map_subscriber' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'group_map_subscriber',
+		// 	__( 'Subscriber' ),
+		// 	array( $this, 'render_group_map_subscriber' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'default_wp_role',
-			__( 'Default role' ),
-			array( $this, 'render_default_wp_role' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'default_wp_role',
+		// 	__( 'Default role' ),
+		// 	array( $this, 'render_default_wp_role' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 
-		add_settings_field(
-			'custom_roles',
-			__( 'Custom role mapping' ),
-			array( $this, 'render_custom_roles' ),
-			'aad-settings',
-			'aad-group-settings'
-		);
+		// add_settings_field(
+		// 	'custom_roles',
+		// 	__( 'Custom role mapping' ),
+		// 	array( $this, 'render_custom_roles' ),
+		// 	'aad-settings',
+		// 	'aad-group-settings'
+		// );
 	}
 
 	public function render_directory_settings_section() {}
@@ -398,17 +441,21 @@ class AADSSO_Settings {
 		echo '<br/><i>I.E.</i> microsoft.com <i>. Sent to AAD to prepopulate AD server.</i> Optional.';
 	}
 
-	public function render_org_tenant_domain() {
-		echo '<input type="text" id="tenant_domain" name="aad-settings[tenant_domain]" value="' . $this->tenant_domain . '" class="widefat" />';
-		echo '<br/><i>I.E.</i> microsoft.com <i>. Used for querying the API.</i> Optional.';
+	public function render_base_uri() {
+		echo '<input type="text" id="base_uri" name="aad-settings[base_uri]" value="' . $this->base_uri . '" class="widefat" />';
+	}
+
+
+	public function render_from_uri() {
+		echo '<input type="text" id="from_uri" name="aad-settings[from_uri]" value="' . $this->from_uri . '" class="widefat" />';
+	}
+
+	public function render_to_uri() {
+		echo '<input type="text" id="to_uri" name="aad-settings[to_uri]" value="' . $this->to_uri . '" class="widefat" />';
 	}
 
 	public function render_client_id() {
 		echo '<input type="text" id="client_id" name="aad-settings[client_id]" value="' . $this->client_id . '" class="widefat" />';
-	}
-
-	public function render_client_secret() {
-		echo '<input type="text" id="client_secret" name="aad-settings[client_secret]" value="' . $this->client_secret . '" class="widefat" />';
 	}
 
 	public function render_override_user_registration() {
