@@ -66,7 +66,6 @@ class AADSSO {
 
 		// Add the link to the organization's sign-in page
 		add_action( 'login_form', array( $this, 'printLoginLink' ) );
-		add_action( 'wp_head', array( $this, 'printLoginLink' ) );
 
 		add_action( 'login_init', array( $this, 'maybeBypassLogin' ) );
 	}
