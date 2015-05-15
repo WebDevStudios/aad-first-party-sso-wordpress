@@ -178,7 +178,7 @@ class AADSSO {
 		// Try to find an existing user in WP with the ObjectId of the currect AAD user
 		$users = get_users( array(
 			'meta_key'    => '_aad_sso_altsecid',
-			'meta_value'  => $jwt->altsecid,
+			'meta_value'  => sanitize_text_field( $jwt->altsecid ),
 			'number'      => 1,
 			'count_total' => false,
 		) );
@@ -199,7 +199,7 @@ class AADSSO {
 		if ( $user && ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
 			// At this point, we have an authorization code, an access token and the user exists in WordPress,
 			// but the user didn't have the _aad_sso_altsecid set. We'll set it and continue.
-			update_user_meta( $user->data->ID, '_aad_sso_altsecid', $jwt->altsecid );
+			update_user_meta( $user->ID, '_aad_sso_altsecid', sanitize_text_field( $jwt->altsecid ) );
 			$user = apply_filters( 'aad_sso_found_user', $user, $jwt );
 
 			return $user;
@@ -241,6 +241,18 @@ class AADSSO {
 			? $userdata['first_name'] . ' ' . $userdata['last_name']
 			: $userdata['first_name'];
 
+		// Allow user-creation override
+		$user = apply_filters( 'aad_sso_new_user_override', null, $userdata, $jwt );
+
+		// If we have a user, log them in
+		if ( ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
+
+			// At this point, the user exists in WordPress.
+			$user = apply_filters( 'aad_sso_found_user', $user, $jwt );
+
+			return $user;
+		}
+
 		$new_user_id = wp_insert_user( $userdata );
 
 		if ( is_wp_error( $new_user_id ) ) {
@@ -248,7 +260,7 @@ class AADSSO {
 		}
 
 		// update usermeta so we know who the user is next time
-		update_user_meta( $new_user_id, '_aad_sso_altsecid', $jwt->altsecid );
+		update_user_meta( $new_user_id, '_aad_sso_altsecid', sanitize_text_field( $jwt->altsecid ) );
 		$user = new WP_User( $new_user_id );
 
 		// @todo do_action new_user
