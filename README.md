@@ -29,7 +29,8 @@ You can do this with `git` or with the 'Download ZIP' link on the right.
 
 Place the `aad-sso-wordpress` folder in your WordPress' plugin folder. Normally, this is `<yourblog>/wp-content/plugins`.
 
-### 2. Get your domain whitelisted by Microsoft domain services (domain must have ssl enabled).
+### 2. Get your domain whitelisted by Microsoft domain services
+Domain must have ssl enabled.
 
 ### 3. Configure the plugin
 
