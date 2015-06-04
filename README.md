@@ -9,7 +9,6 @@ user accounts to sign in to WordPress. Organizations with Office 365 already hav
 Azure Active Directory and can use this plugin for all of their users and any onsite
 Active Directory linked to Azure Active Directory can also be used.
 
-- Security group membership can be mapped to WordPress user roles.
 - Standard WordPress login is still available.
 
 In the typical flow:
@@ -30,35 +29,8 @@ You can do this with `git` or with the 'Download ZIP' link on the right.
 
 Place the `aad-sso-wordpress` folder in your WordPress' plugin folder. Normally, this is `<yourblog>/wp-content/plugins`.
 
-### 2. Register an Azure Active Directory application
-
-For these steps, you must have an Azure subscription with access to the Azure Active Directory tenant that you would like to use with your blog.
-
-1. Sign in to the [Azure portal](https://manage.windowsazure.com), and navigate to the ACTIVE DIRECTORY section. Choose the directory (tenant) that you would like to use. This should be the directory containing the users and (optionally) groups that will have access to your WordPress blog.
-3. Under the APPLICATIONS tab, click ADD to register a new application. Choose 'Add an application my organization is developing', and a recognizable name. Choose values for sign-in URL and App ID URL. The blog's URL is usually a good choice.
-4. When the app is created, under the CONFIGURE tab, generate a key and copy the secret value (it will be visible once only, after you save).
-5. Add a reply URL with the format: `https://<your blog url>/wp-login.php`.
+### 2. Get your domain whitelisted by Microsoft domain services (domain must have ssl enabled).
 
 ### 3. Configure the plugin
 
 The plugin can be configured in Settings > AAD Settings.
-
-### 4. (Optional) Set WordPress roles based on Azure AD group membership
-
-The AADSSO plugin can be configured to set different WordPress roles based on the user's membership to a set of user-defined groups. This is a great way to control who has access to the blog, and under what role.
-
-**You will need to enable the permissions for your Azure Active Directory application**. In the 'CONFIGURE' tab, Under the 'permissions to other applications' heading, it needs to have Delegated Permission to "Read Directory Data" and "Enable sign-on and read users' profiles".
-
-Once your application permissions have been updated, you will need to update the plugin's configuration in Settings > AAD Settings:
-
-- Enable role mapping must be checked.
-- There are inputs for several common WordPress roles, Administrator, Editor, Author, Contributor, and Subscriber. The inputs expect the Azure Active Directory group object IDs. You can find the group object IDs under the Active Directory 'GROUPS' tab.
-	- You will see a listing of any custom groups that exist for that directory.
-	- Click on the one you want the ID for.
-	- Click on the 'PROPERTIES' tab.
-	- At the bottom, you'll see the value you need in the 'OBJECT ID' setting.
-- Custom WordPress roles to Activie Directory groups can be added in the Custom role mapping box by placing one mapping per line in the format: `<wp_role> <aad_group_id>`.
-
-### Groups membership-based roles (no default role)
-
-Users are matched by the Azure AD login IDs in WordPress, and WordPress roles are dictated by membership to a given Azure AD group. If the user is not a part of any of these groups, they are assigned the default new user role in WordPress, or you can specify the default role in the plugin's configuration settings.
