@@ -270,7 +270,7 @@ class AADSSO {
 	}
 
 	function getLoginUrl() {
-		$redirect_uri = apply_filters( 'aad_sson_login_redirect_uri', self::redirect_uri( __FUNCTION__ ) );
+		$redirect_uri = self::redirect_uri( __FUNCTION__ );
 		$nonce = wp_create_nonce( self::NONCE_NAME );
 		return $this->settings->base_uri .'oauth2/authorize?client_id='. $this->settings->client_id .'&response_mode=query&response_type=code+id_token&redirect_uri='. $redirect_uri .'&nonce='. $nonce;
 	}
