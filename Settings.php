@@ -176,6 +176,9 @@ class AADSSO_Settings {
 			$jsonSettings = fread( $f, filesize( $jsonFile ) );
 			fclose( $f );
 		} else {
+			if ( ! isset( $GLOBALS['pagenow'] ) ) {
+				$GLOBALS['pagenow'] = '';
+			}
 			$response = wp_remote_get( $jsonFile );
 			$jsonSettings = wp_remote_retrieve_body( $response );
 		}
