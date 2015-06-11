@@ -182,6 +182,7 @@ class AADSSO {
 			'number'      => 1,
 			'count_total' => false,
 		) );
+
 		// We should ONLY have one of these
 		$user = reset( $users );
 
@@ -234,7 +235,7 @@ class AADSSO {
 			'user_pass'    => wp_generate_password( 20, true ),
 			'first_name'   => isset( $jwt->given_name ) ? esc_html( $jwt->given_name ) : '',
 			'last_name'    => isset( $jwt->family_name ) ? esc_html( $jwt->family_name ) : '',
-			'role'         => 'subscriber',
+			'role'         => $this->settings->default_wp_role ? $this->settings->default_wp_role : 'subscriber',
 		);
 
 		$userdata['display_name'] = $userdata['nickname'] = $userdata['first_name'] && $userdata['last_name']
