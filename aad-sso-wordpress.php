@@ -149,8 +149,6 @@ class AADSSO {
 			return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
 		}
 
-
-
 		if ( ! wp_verify_nonce( $jwt->nonce, self::NONCE_NAME ) ) {
 			return new WP_Error( 'nonce_fail', sprintf( 'NONCE_NAME mismatch. Expecting %s', self::NONCE_NAME ) );
 		}
