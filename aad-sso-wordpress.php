@@ -276,7 +276,7 @@ class AADSSO {
 
 	function getLogoutUrl() {
 		$logout_uri = self::logout_redirect_uri( __FUNCTION__ );
-		return trailingslashit( $this->settings->base_uri ) .'oauth2/oauth2/logout?post_logout_redirect_uri='. $logout_uri;
+		return trailingslashit( $this->settings->base_uri ) .'oauth2/logout?post_logout_redirect_uri='. $logout_uri;
 	}
 
 	/*** View ****/
