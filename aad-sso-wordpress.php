@@ -271,12 +271,12 @@ class AADSSO {
 	function getLoginUrl() {
 		$redirect_uri = self::redirect_uri( __FUNCTION__ );
 		$nonce = wp_create_nonce( self::NONCE_NAME );
-		return $this->settings->base_uri .'oauth2/authorize?client_id='. $this->settings->client_id .'&response_mode=query&response_type=code+id_token&redirect_uri='. $redirect_uri .'&nonce='. $nonce;
+		return trailingslashit( $this->settings->base_uri ) .'oauth2/authorize?client_id='. $this->settings->client_id .'&response_mode=query&response_type=code+id_token&redirect_uri='. $redirect_uri .'&nonce='. $nonce;
 	}
 
 	function getLogoutUrl() {
 		$logout_uri = self::logout_redirect_uri( __FUNCTION__ );
-		return 'https://login.windows.net/common/oauth2/oauth2/logout?post_logout_redirect_uri='. $logout_uri;
+		return trailingslashit( $this->settings->base_uri ) .'common/oauth2/oauth2/logout?post_logout_redirect_uri='. $logout_uri;
 	}
 
 	/*** View ****/
