@@ -192,18 +192,6 @@ class AADSSO {
 			return $user;
 		}
 
-		$user = get_user_by( 'email', $jwt->email );
-
-		// If we have a user, log them in
-		if ( $user && ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
-			// At this point, we have an authorization code, an access token and the user exists in WordPress,
-			// but the user didn't have the _aad_sso_altsecid set. We'll set it and continue.
-			update_user_meta( $user->ID, '_aad_sso_altsecid', sanitize_text_field( $jwt->altsecid ) );
-			$user = apply_filters( 'aad_sso_found_user', $user, $jwt );
-
-			return $user;
-		}
-
 		/*
 		 * No user found. Now decide if we are allowed to create a new
 		 * user or not. Will use the WordPress setting from Settings > General
