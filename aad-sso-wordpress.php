@@ -174,21 +174,7 @@ class AADSSO {
 		}
 
 		// Try to find an existing user in WP with the ObjectId of the currect AAD user
-		// We need to do this with a normal SQL query, as get_users() seems to behave unexpectedly in an multisite environment
-		global $wpdb;
-
-		$query = "SELECT user.ID
-		FROM " . $wpdb->base_prefix . "users user
-		INNER JOIN  " . $wpdb->base_prefix . "usermeta meta ON meta.user_id = user.ID
-		WHERE meta.meta_key = '_aad_sso_altsecid'
-		AND meta.meta_value = '%s'
-		ORDER BY user.user_registered";
-
-		$user = '';
-		$user_id = $wpdb->get_results( $wpdb->prepare( $query, sanitize_text_field( $jwt->altsecid ) ), ARRAY_A );
-		if ( isset( $user_id[0] ) && isset( $user_id[0]['ID'] ) ) {
-			$user = get_user_by( 'id', $user_id[0]['ID'] );
-		}
+		$user = $this->get_user_by_aad_id( $jwt->altsecid );
 
 		// If we have a user, log them in
 		if ( ! empty( $user ) && is_a( $user, 'WP_User' ) ) {
@@ -258,6 +244,20 @@ class AADSSO {
 
 		// @todo do_action new_user
 		$user = apply_filters( 'aad_sso_new_user', $user, $jwt );
+
+		return $user;
+	}
+
+	public function get_user_by_aad_id( $aad_id ) {
+		global $wpdb;
+		/*
+		 * We need to do this with a normal SQL query, as get_users()
+		 * seems to behave unexpectedly in a multisite environment
+		 */
+		$query = "SELECT user_id FROM $wpdb->usermeta WHERE meta_key = '_aad_sso_altsecid' AND meta_value = %s";
+		$query = $wpdb->prepare( $query, sanitize_text_field( $aad_id ) );
+		$user_id = $wpdb->get_var( $query );
+		$user = $user_id ? get_user_by( 'id', $user_id ) : false;
 
 		return $user;
 	}
