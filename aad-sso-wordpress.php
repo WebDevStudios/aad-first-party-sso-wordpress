@@ -189,7 +189,7 @@ class AADSSO {
 		 * user or not. Will use the WordPress setting from Settings > General
 		 */
 		$reg_open = get_option( 'users_can_register' );
-		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration );
+		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration, $jwt );
 
 		if ( ! $reg_open && ! $override_reg ) {
 			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->email ) );
