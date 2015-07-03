@@ -173,7 +173,7 @@ class AADSSO {
 			return new WP_Error( 'issuing_is_expired', sprintf( 'ERROR: Account has expired on %s', $jwt->exp ) );
 		}
 
-		// Try to find an existing user in WP with the ObjectId of the currect AAD user
+		// Try to find an existing user in WP with the altsecid of the currect AAD user
 		$user = $this->get_user_by_aad_id( $jwt->altsecid );
 
 		// If we have a user, log them in
@@ -284,7 +284,7 @@ class AADSSO {
 		$user_id = $wpdb->get_var( $query );
 		$user = $user_id ? get_user_by( 'id', $user_id ) : false;
 
-		return $user;
+		return apply_filters( 'aad_sso_altsecid_user', $user, $aad_id );
 	}
 
 	function getLoginUrl() {
