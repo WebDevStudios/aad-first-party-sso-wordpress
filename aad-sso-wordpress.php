@@ -192,14 +192,16 @@ class AADSSO {
 		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration, $jwt );
 
 		if ( ! $reg_open && ! $override_reg ) {
-			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt->email ) );
+			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt ) );
 		}
 
-		if ( empty( $jwt->email ) ) {
-			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: no email present for user %s.', $jwt->altsecid ) );
+		$email = $this->get_jwt_email( $jwt );
+
+		if ( is_wp_error( $email ) ) {
+			return $email;
 		}
 
-		$username = explode( '@', $jwt->email );
+		$username = explode( '@', $email );
 		$username = apply_filters( 'aad_sso_login_username', $username[0], $jwt );
 
 		$username = get_user_by( 'login', $username )
@@ -209,7 +211,7 @@ class AADSSO {
 		// Setup the minimum required user data
 		$userdata = array(
 			'user_login'   => wp_slash( $username ),
-			'user_email'   => wp_slash( $jwt->email ),
+			'user_email'   => wp_slash( $email ),
 			'user_pass'    => wp_generate_password( 20, true ),
 			'first_name'   => isset( $jwt->given_name ) ? esc_html( $jwt->given_name ) : '',
 			'last_name'    => isset( $jwt->family_name ) ? esc_html( $jwt->family_name ) : '',
@@ -246,6 +248,29 @@ class AADSSO {
 		$user = apply_filters( 'aad_sso_new_user', $user, $jwt );
 
 		return $user;
+	}
+
+	public function get_jwt_email( $jwt ) {
+		if ( empty( $jwt->email ) && empty( $jwt->unique_name ) ) {
+			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: no email present for user %s.', $jwt ) );
+		}
+
+		// Get email from email field
+		$email = ! empty( $jwt->email ) ? $jwt->email : false;
+
+		if ( ! $email ) {
+
+			// or try to get it from the unique name
+			$has_hash = strrpos( $jwt->unique_name, '#' );
+			$email = false !== $has_hash ? substr( $jwt->unique_name, $has_hash + 1 ) : $jwt->unique_name;
+
+			// if not an email, then we don't have an email.
+			if ( ! filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
+				return new WP_Error( 'user_not_registered', sprintf( 'ERROR: no email present for user %s.', $jwt ) );
+			}
+		}
+
+		return $email;
 	}
 
 	public function get_user_by_aad_id( $aad_id ) {
