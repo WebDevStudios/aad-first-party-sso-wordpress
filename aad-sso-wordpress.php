@@ -149,6 +149,10 @@ class AADSSO {
 			return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
 		}
 
+		if ( ! isset( $jwt->altsecid ) || ! $jwt->altsecid ) {
+			return new WP_Error( 'missing_altsecid_property', 'The JWT token is missing the altsecid property.' );
+		}
+
 		if ( ! wp_verify_nonce( $jwt->nonce, self::NONCE_NAME ) ) {
 			return new WP_Error( 'nonce_fail', sprintf( 'NONCE_NAME mismatch. Expecting %s', self::NONCE_NAME ) );
 		}
