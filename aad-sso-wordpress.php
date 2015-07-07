@@ -132,11 +132,12 @@ class AADSSO {
 		if ( is_a( $user, 'WP_User' ) ) {
 			return $user;
 		}
+
 		if ( ! isset( $_GET['id_token'] ) ) {
 
 			if ( isset( $_GET['error'] ) ) {
 				// The attempt to get an authorization code failed (i.e., the reply from the STS was "No.")
-				return new WP_Error( $_GET['error'], sprintf( 'ERROR: Access denied to Azure Active Directory. %s', $_GET['error_description'] ) );
+				return new WP_Error( $_GET['error'], sprintf( __( 'ERROR: Access denied to Azure Active Directory. %s', 'aad-sso' ), $_GET['error_description'] ) );
 			}
 
 			return $user;
@@ -146,35 +147,35 @@ class AADSSO {
 			AADSSO_AuthorizationHelper::$base_uri = $this->settings->base_uri;
 			$jwt = AADSSO_AuthorizationHelper::validate_id_token( $_GET['id_token'] );
 		} catch ( Exception $e ) {
-			return new WP_Error( 'invalid_id_token' , sprintf( 'ERROR: Invalid id_token. %s', $e->getMessage() ) );
+			return new WP_Error( 'invalid_id_token' , sprintf( __( 'ERROR: Invalid id_token. %s', 'aad-sso' ), $e->getMessage() ) );
 		}
 
 		if ( ! isset( $jwt->altsecid ) || ! $jwt->altsecid ) {
-			return new WP_Error( 'missing_altsecid_property', 'The JWT token is missing the altsecid property.' );
+			return new WP_Error( 'missing_altsecid_property', __( 'You need to sign-in with your Windows Live ID.', 'aad-sso' ) );
 		}
 
 		if ( ! wp_verify_nonce( $jwt->nonce, self::NONCE_NAME ) ) {
-			return new WP_Error( 'nonce_fail', sprintf( 'NONCE_NAME mismatch. Expecting %s', self::NONCE_NAME ) );
+			return new WP_Error( 'nonce_fail', sprintf( __( 'NONCE_NAME mismatch. Expecting %s', 'aad-sso' ), self::NONCE_NAME ) );
 		}
 
 		if ( $jwt->aud != $this->settings->client_id ) {
 			//	Need to check [aud] is the same as the client id
-			return new WP_Error( 'client_id_mismatch', sprintf( 'ERROR: aud ( %s ) does not match Client ID', $jwt->aud ) );
+			return new WP_Error( 'client_id_mismatch', sprintf( __( 'ERROR: aud ( %s ) does not match Client ID', 'aad-sso' ), $jwt->aud ) );
 		}
 
 		if ( ( strpos( $jwt->iss, 'sts.windows.net' ) == false )  && ( strpos( $jwt->iss, 'sts.windows-ppe.net' ) == false ) )  {
 			//	[iss] contains sts.windows.net or sts.windows-ppe.net
-			return new WP_Error( 'issuer_mismatch', sprintf( 'ERROR: Issuer was %s, expected windows.net', $jwt->iss ) );
+			return new WP_Error( 'issuer_mismatch', sprintf( __( 'ERROR: Issuer was %s, expected windows.net', 'aad-sso' ), $jwt->iss ) );
 		}
 
 		if ( (int) $jwt->iat > (int) time() ) {
 			//	[iat] must not be in the future
-			return new WP_Error( 'issuing_time_error', sprintf( 'ERROR: Account must be issued in the past, was issued at %s.', $jwt->iat ) );
+			return new WP_Error( 'issuing_time_error', sprintf( __( 'ERROR: Account must be issued in the past, was issued at %s.', 'aad-sso' ), $jwt->iat ) );
 		}
 
 		if ( (int) $jwt->exp <= (int) time() ) {
 			//	[exp] must not be in the past
-			return new WP_Error( 'issuing_is_expired', sprintf( 'ERROR: Account has expired on %s', $jwt->exp ) );
+			return new WP_Error( 'issuing_is_expired', sprintf( __( 'ERROR: Account has expired on %s', 'aad-sso' ), $jwt->exp ) );
 		}
 
 		// Try to find an existing user in WP with the altsecid of the currect AAD user
@@ -196,7 +197,7 @@ class AADSSO {
 		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration, $jwt );
 
 		if ( ! $reg_open && ! $override_reg ) {
-			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: The authenticated user %s is not a registered user in this blog.', $jwt ) );
+			return new WP_Error( 'user_not_registered', sprintf( __( 'ERROR: The authenticated user %s is not a registered user in this blog.', 'aad-sso' ), $jwt ) );
 		}
 
 		$email = $this->get_jwt_email( $jwt );
@@ -256,7 +257,7 @@ class AADSSO {
 
 	public function get_jwt_email( $jwt ) {
 		if ( empty( $jwt->email ) && empty( $jwt->unique_name ) ) {
-			return new WP_Error( 'user_not_registered', sprintf( 'ERROR: no email present for user %s.', $jwt ) );
+			return new WP_Error( 'user_not_registered', sprintf( __( 'ERROR: no email present for user %s.', 'aad-sso' ), $jwt ) );
 		}
 
 		// Get email from email field
@@ -270,7 +271,7 @@ class AADSSO {
 
 			// if not an email, then we don't have an email.
 			if ( ! filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
-				return new WP_Error( 'user_not_registered', sprintf( 'ERROR: no email present for user %s.', $jwt ) );
+				return new WP_Error( 'user_not_registered', sprintf( __( 'ERROR: no email present for user %s.', 'aad-sso' ), $jwt ) );
 			}
 		}
 
@@ -317,12 +318,12 @@ class AADSSO {
 		$logout_url = $this->getLogoutUrl();
 		$org_display_name = $this->settings->org_display_name;
 
-		$html = <<<EOF
+		$html = '
 			<p class="aadsso-login-form-text">
-				<a href="%s">Sign in with your %s account</a><br />
-				<a class="dim" href="%s">Sign out</a>
+				<a href="%s">' . __( 'Sign in with your %s account', 'aad-sso' ) . '</a><br />
+				<a class="dim" href="%s">' . __( 'Sign out', 'aad-sso' ) . '</a>
 			</p>
-EOF;
+		';
 		$html = sprintf( $html, $login_url, htmlentities( $org_display_name ), $logout_url );
 		return apply_filters( 'aad_sso_login_link', $html, $login_url, $logout_url, $org_display_name );
 	}
