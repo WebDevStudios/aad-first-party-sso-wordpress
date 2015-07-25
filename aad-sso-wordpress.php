@@ -5,7 +5,7 @@ Plugin Name: Azure Active Directory First-Party Single Sign-on for WordPress
 Plugin URI: http://webdevstudios.com
 Description: Allows you to use your organization's Azure Active Directory user accounts to log in to WordPress. If your organization is using Office 365, your user accounts are already in Azure Active Directory. This plugin uses OAuth 2.0 to authenticate users, and the Azure Active Directory Graph to get group membership and other details.
 Author: WebDevStudios
-Version: 0.2c
+Version: 0.2.1
 Author URI: http://webdevstudios.com/
 */
 
@@ -17,6 +17,7 @@ define( 'AADSSO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AADSSO_SETTINGS_PATH', AADSSO_PLUGIN_DIR . 'Settings.json' );
 
 require_once AADSSO_PLUGIN_DIR . 'Settings.php';
+require_once AADSSO_PLUGIN_DIR . 'Profile.php';
 require_once AADSSO_PLUGIN_DIR . 'AuthorizationHelper.php';
 
 // TODO: Auto-load the (the exceptions at least)
@@ -44,7 +45,10 @@ class AADSSO {
 
 	const NONCE_NAME = 'aad-sso-nonce';
 
-	public function __construct() {
+	protected function __construct() {
+
+		AADSSO_Profile::get_instance( $this );
+
 		$this->settings = AADSSO_Settings::load_settings();
 
 		// Set the redirect urls
