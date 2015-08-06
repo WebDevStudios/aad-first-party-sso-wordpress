@@ -156,7 +156,7 @@ class AADSSO {
 		}
 
 		if ( ! isset( $jwt->altsecid ) || ! $jwt->altsecid ) {
-			return new WP_Error( 'missing_altsecid_property', __( 'You need to sign-in with your Windows Live ID.', 'aad-sso' ) );
+			return new WP_Error( 'missing_altsecid_property', sprintf( __( '%s is not a valid account. Please sign-out first and then sign-in with your Windows Live ID.', 'aad-sso' ), $jwt->unique_name ) );
 		}
 
 		if ( ! wp_verify_nonce( $jwt->nonce, self::NONCE_NAME ) ) {
