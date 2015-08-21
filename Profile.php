@@ -41,7 +41,7 @@ class AADSSO_Profile {
 	 */
 	public static function get_instance( $aadsso = null ) {
 		if ( null === self::$single_instance ) {
-			if ( $aadsso ) {
+			if ( ! $aadsso ) {
 				throw new Exception( 'AADSSO_Profile::get_instance requires the AADSSO instance to be provided' );
 			}
 			self::$single_instance = new self( $aadsso );
