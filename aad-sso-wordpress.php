@@ -5,7 +5,7 @@ Plugin Name: Azure Active Directory First-Party Single Sign-on for WordPress
 Plugin URI: http://webdevstudios.com
 Description: Allows you to use your organization's Azure Active Directory user accounts to log in to WordPress. If your organization is using Office 365, your user accounts are already in Azure Active Directory. This plugin uses OAuth 2.0 to authenticate users, and the Azure Active Directory Graph to get group membership and other details.
 Author: WebDevStudios
-Version: 0.2.1
+Version: 0.2.2
 Author URI: http://webdevstudios.com/
 */
 
