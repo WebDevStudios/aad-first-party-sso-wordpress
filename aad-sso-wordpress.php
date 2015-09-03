@@ -202,7 +202,14 @@ class AADSSO {
 		$override_reg = apply_filters( 'aad_override_user_registration', $this->settings->override_user_registration, $jwt );
 
 		if ( ! $reg_open && ! $override_reg ) {
-			return new WP_Error( 'user_not_registered', sprintf( __( 'ERROR: The authenticated user %s is not a registered user in this blog.', 'aad-sso' ), $jwt ) );
+
+			$email = $this->get_jwt_email( $jwt );
+
+			if ( is_wp_error( $email ) ) {
+				return $email;
+			}
+
+			return new WP_Error( 'user_not_registered', sprintf( __( 'ERROR: The authenticated user %s is not a registered user in this blog.', 'aad-sso' ), $this->get_username( $email, $jwt ) ) );
 		}
 
 		$email = $this->get_jwt_email( $jwt );
@@ -211,16 +218,9 @@ class AADSSO {
 			return $email;
 		}
 
-		$username = explode( '@', $email );
-		$username = apply_filters( 'aad_sso_login_username', $username[0], $jwt );
-
-		$username = get_user_by( 'login', $username )
-			? 'aadsso-'. sanitize_text_field( $jwt->altsecid )
-			: $username;
-
 		// Setup the minimum required user data
 		$userdata = array(
-			'user_login'   => wp_slash( $username ),
+			'user_login'   => wp_slash( $this->get_username( $email, $jwt ) ),
 			'user_email'   => wp_slash( $email ),
 			'user_pass'    => wp_generate_password( 20, true ),
 			'first_name'   => isset( $jwt->given_name ) ? esc_html( $jwt->given_name ) : '',
@@ -281,6 +281,18 @@ class AADSSO {
 		}
 
 		return $email;
+	}
+
+	public function get_username( $email, $jwt ) {
+
+		$username = explode( '@', $email );
+		$username = apply_filters( 'aad_sso_login_username', $username[0], $jwt );
+
+		$username = get_user_by( 'login', $username )
+			? 'aadsso-'. sanitize_text_field( $jwt->altsecid )
+			: $username;
+
+		return $username;
 	}
 
 	public function get_user_by_aad_id( $aad_id ) {
